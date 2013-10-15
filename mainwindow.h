@@ -20,6 +20,11 @@ public:
 	~MainWindow();
 	
 	void log(QString message, bool error = false);
+	void output(QString json);
+	void setProgressMax(int size);
+	void incrProgress();
+	void resetProgress();
+	void setSampleName(QString name);
 	
 private slots:
 	void on_convertButton_clicked();
@@ -31,9 +36,10 @@ private slots:
 	void on_outputPathEdit_textChanged(const QString &outPath);
 	
 private:
-	Ui::MainWindow *ui;
-	
+	Ui::MainWindow* ui;
 	Converter* converter;
+	double progressIncr;
+	
 	void selectDirPath(QLineEdit* pathEdit);
 	void updatePath(QString path, QLineEdit* lineEdit);
 };

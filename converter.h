@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 
 #include "mainwindow.h"
+#include "convertexception.h"
 
 class Converter
 {
@@ -23,13 +24,19 @@ private:
     
     void loadConfig();
 	void setFileList();
+	
+	QJsonValue decodePresetHeader(QByteArray blob) throw(ConvertException);
+	QJsonObject decodeComponents(QByteArray blob, uint offset) throw(ConvertException);
+	
 public:
     Converter(QString inPath, QString outPath, MainWindow* window);
     
     QStringList getFileNameList();
 	void logComponents();
-    QString convert();
-    QString convert(QString inPath);
+    QString convertAll();
+    QString convertAll(QString inPath);
+	QString convertSingle(QFileInfo file);
+	void setStop();
 };
 
 #endif // CONVERTER_H

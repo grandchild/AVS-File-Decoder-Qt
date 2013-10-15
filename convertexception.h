@@ -17,6 +17,9 @@ public:
     const char* what() const throw() {
         return message;
     }
+	QString qwhat() const throw() {
+		return QString(message);
+	}
 };
 
 #endif // CONVERTEXCEPTION_H

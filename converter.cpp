@@ -8,7 +8,7 @@
 #include <QJsonObject>
 #include <QDateTime>
 
-#include "convertexception.h"
+#include "defines.h"
 
 Converter::Converter(QString inPath, QString outPath, MainWindow* window):
     inPath(inPath),
@@ -85,11 +85,11 @@ Converter::getFileNameList() {
 }
 
 QString
-Converter::convert(QString inPath) {
+Converter::convertAll(QString inPath) {
 	if(error) return QString();
     this->inPath = inPath;
 	setFileList();
-    return convert();
+    return convertAll();
 }
 
 void
@@ -98,30 +98,84 @@ Converter::logComponents() {
 }
 
 QString
-Converter::convert() {
+Converter::convertAll() {
 	if(error) return QString();
+	window->setProgressMax(fileList.length());
 	foreach(QFileInfo file, fileList) {
 		if(stop || error) break;
-		QFile presetFile(file.fileName());
-		presetFile.open(QFile::ReadOnly);
-		QByteArray presetData = presetFile.readAll();
-		presetFile.close();
-		
-		// now build the preset JSON document
-		QJsonDocument preset;
-		preset.setObject(QJsonObject());
-		preset.object()["name"] = file.fileName();
-		preset.object()["date"] = file.lastModified().toString(Qt::ISODate);
-		//preset.object()["author"] = guessAuthor(file.fileName()); // TODO: extract likely author name from filename
-		
-		
-		bool ok = true;
-		json = preset.toJson(QJsonDocument::Indented);
-		
-		if(!ok) {
-			window->log("Failed to convert to JSON string.", /*error*/true);
+		QString json = convertSingle(file);
+		bool ok = !json.isEmpty();
+		if(ok) {
+			window->log("<b>"+file.fileName()+"</b> converted.");
+			window->setSampleName(file.fileName());
+			// write to file here...
+			window->output(json);
+		} else {
 		}
+		window->incrProgress();
 	}
 	return QString();
 }
 
+
+QString
+Converter::convertSingle(QFileInfo file) {
+	QByteArray blob;
+	if(file.exists()) {
+		QFile presetFile(file.filePath());
+		presetFile.open(QFile::ReadOnly);
+		blob = presetFile.readAll();
+		presetFile.close();
+	} else {
+		window->log("File '"+file.fileName()+"' not found.", /*error*/true);
+		return "";
+	}
+	
+	// now build the preset JSON document
+	bool ok = true;
+	QJsonDocument preset;
+	QJsonObject rootObj;
+	rootObj["name"] = file.fileName();
+	rootObj["date"] = file.lastModified().toString(Qt::ISODate);
+	//rootObj["author"] = guessAuthor(file.fileName()); // TODO: extract likely author name from filename
+	try {
+		rootObj["clearFrame"] = decodePresetHeader(blob);
+		rootObj["components"] = decodeComponents(blob, AVS_HEADER_LENGTH);
+	} catch(ConvertException e) {
+		window->log("Failed to convert: <b>"+e.qwhat()+"</b>", /*error*/true);
+	}
+	
+	preset.setObject(rootObj);
+	
+	QString json = preset.toJson(QJsonDocument::Indented);
+	ok = !json.isEmpty();
+	if(ok) {
+		return json;
+	} else {
+		window->log("Output for '"+file.fileName()+"' is empty.", /*error*/true);
+		return "";
+	}
+}
+
+QJsonValue
+Converter::decodePresetHeader(QByteArray blob) throw(ConvertException) {
+	QByteArray presetHeader0_1("Nullsoft AVS Preset 0.1");
+	QByteArray presetHeader0_2("Nullsoft AVS Preset 0.2");
+	presetHeader0_1[AVS_HEADER_LENGTH-2] = 0x1A; // there is one final '26' byte after the readable header...
+	presetHeader0_2[AVS_HEADER_LENGTH-2] = 0x1A; // ...and repurpose the \0 byte position from the str ctor above.
+	if(!blob.startsWith(presetHeader0_2) &&
+		!blob.startsWith(presetHeader0_1)) { // 0.1 only if 0.2 failed because it's far rarer.
+		throw new ConvertException("Invalid preset header.");
+	}
+	return QJsonValue(blob[AVS_HEADER_LENGTH-1]==(char)1); // "Clear Every Frame"
+}
+
+QJsonObject
+Converter::decodeComponents(QByteArray blob, uint offset) throw(ConvertException) {
+	return QJsonObject();
+}
+
+void
+Converter::setStop() {
+	stop = true;
+}

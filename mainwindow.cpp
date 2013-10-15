@@ -30,6 +30,32 @@ MainWindow::log(QString message, bool error) {
 }
 
 void
+MainWindow::output(QString json) {
+	ui->outputSample->setText(json);
+}
+
+void
+MainWindow::setProgressMax(int size) {
+	ui->progressBar->setMaximum(size);
+}
+
+void
+MainWindow::incrProgress() {
+	int curValue = ui->progressBar->value();
+	ui->progressBar->setValue(++curValue);
+}
+
+void
+MainWindow::resetProgress() {
+	ui->progressBar->reset();
+}
+
+void
+MainWindow::setSampleName(QString name) {
+	ui->samplePresetNameLabel->setText(name);
+}
+
+void
 MainWindow::on_convertButton_clicked()
 {
 	ui->cancelButton->setDisabled(false);
@@ -41,10 +67,17 @@ MainWindow::on_convertButton_clicked()
 					ui->outputPathEdit->text(),
 					this);
 	}
-	//converter->convert();
-	//ui->logField->toPlainText();
+	converter->convertAll();
 	free(converter);
 	converter = NULL;
+	ui->cancelButton->setDisabled(true);
+	ui->convertButton->setDisabled(false);
+}
+
+void
+MainWindow::on_cancelButton_clicked()
+{
+	converter->setStop();
 	ui->cancelButton->setDisabled(true);
 	ui->convertButton->setDisabled(false);
 }
@@ -65,14 +98,6 @@ void MainWindow::selectDirPath(QLineEdit* pathEdit) {
 	if(!selectedDir.isEmpty()) {
 		pathEdit->setText(selectedDir);
 	}
-}
-
-void
-MainWindow::on_cancelButton_clicked()
-{
-	// cancel operation
-	ui->cancelButton->setDisabled(true);
-	ui->convertButton->setDisabled(false);
 }
 
 void MainWindow::on_listFilesButton_clicked()
@@ -106,6 +131,10 @@ void MainWindow::updatePath(QString path, QLineEdit* lineEdit) {
 	} else {
 		lineEdit->setStyleSheet("");
 	}
-	free(converter);
-	converter = NULL;
+	if(converter!=NULL) {
+		free(converter);
+		converter = NULL;
+		log("Converter reset.");
+	}
+	resetProgress();
 }
