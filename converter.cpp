@@ -5,10 +5,11 @@
 #include <QFileInfoList>
 #include <QDirIterator>
 #include <QByteArray>
-#include <QJsonObject>
+#include <QJsonDocument>
 #include <QDateTime>
 
 #include "defines.h"
+#include "component.h"
 
 Converter::Converter(QString inPath, QString outPath, MainWindow* window):
     inPath(inPath),
@@ -31,12 +32,23 @@ Converter::loadConfig() {
 		QByteArray componentsJSON = componentsFile.readAll();
 		componentsFile.close();
 		
-		this->components = QJsonDocument::fromJson(componentsJSON, &parseError);
+		components = QJsonDocument::fromJson(componentsJSON, &parseError).array();
 		if(parseError.error != QJsonParseError::NoError) {
-			window->log(QString(parseError.errorString()+" at offset %1 in '"+componentsFile.fileName()+"'").arg(parseError.offset), true);
+			window->log(QString(parseError.errorString()+" at offset %1 in '"+componentsFile.fileName()+"'").arg(parseError.offset), /*error*/true);
+		}
+		
+		for(int i=0; i<components.size(); i++) {
+			QJsonValue code = components[i].toObject()["code"];
+			if(code.isArray()) {
+				QByteArray apeCode;
+				foreach(QJsonValue byte, code.toArray()) {
+					apeCode.append((char)byte.toString().toUInt(0, 0));
+				}
+				componentApeCodes[i] = apeCode;
+			}
 		}
 	} else {
-		window->log("'"+componentsFile.fileName()+"' does not exist.");
+		window->log("'"+componentsFile.fileName()+"' does not exist.", /*error*/true);
     }
 	
     QFile tablesFile("tables.json");
@@ -45,12 +57,12 @@ Converter::loadConfig() {
 		QByteArray tablesJSON = tablesFile.readAll();
 		tablesFile.close();
 		
-		this->tables = QJsonDocument::fromJson(tablesJSON, &parseError);
+		tables = QJsonDocument::fromJson(tablesJSON, &parseError).object();
 		if(parseError.error != QJsonParseError::NoError) {
-			window->log(QString(parseError.errorString()+" at offset %1 in '"+tablesFile.fileName()+"'").arg(parseError.offset), true);
+			window->log(QString(parseError.errorString()+" at offset %1 in '"+tablesFile.fileName()+"'").arg(parseError.offset), /*error*/true);
 		}
 	} else {
-		window->log("'"+tablesFile.fileName()+"' does not exist.");
+		window->log("'"+tablesFile.fileName()+"' does not exist.", /*error*/true);
 	}
 }
 
@@ -94,7 +106,7 @@ Converter::convertAll(QString inPath) {
 
 void
 Converter::logComponents() {
-	window->log("Comps: "+QString(components.toJson(QJsonDocument::Compact)));
+	window->log("Comps: "+QString(QJsonDocument(components).toJson(QJsonDocument::Compact)));
 }
 
 QString
@@ -170,9 +182,56 @@ Converter::decodePresetHeader(QByteArray blob) throw(ConvertException) {
 	return QJsonValue(blob[AVS_HEADER_LENGTH-1]==(char)1); // "Clear Every Frame"
 }
 
-QJsonObject
+QJsonArray
 Converter::decodeComponents(QByteArray blob, uint offset) throw(ConvertException) {
-	return QJsonObject();
+	QJsonArray componentArray;
+	while(offset < (uint)blob.length()) {
+		uint code = Component::getUInt32(blob, offset);
+		int i = getComponentIndex(code, blob, offset);
+		bool isDll = code!=0xfffffffe && code>BUILTIN_MAX;
+		uint size = Component::getUInt32(blob, offset+SIZE_INT+isDll*32);
+		QJsonObject res;
+		if(i<0) {
+			res["type"] = QJsonValue("Unknown: ("+QString("%1").arg(-i)+")");
+		} else {
+			offset = offset+SIZE_INT*2+isDll*32;
+			QJsonObject compConf = components[i].toObject();
+			Component comp(
+						blob,
+						offset,
+						offset+size,
+						compConf["name"].toString(),
+						compConf["group"].toString(),
+						compConf["func"].toString(),
+						compConf["fields"].toObject(),
+						window);
+			//res = comp.decode();
+		}
+		componentArray.append(res);
+		offset += size + SIZE_INT*2 + isDll*32;
+	}
+	return components;
+}
+
+int
+Converter::getComponentIndex(uint code, QByteArray blob, uint offset) {
+	int limit = components.size();
+	for (int i = 0; i < components.size(); i++) {
+		QJsonValue currentCode = components[i].toObject()["code"];
+		if(currentCode.isString()) {
+			if(code == (uint)(currentCode.toString().toUInt(0, 0))) {
+				window->log("Found component: "+components[i].toObject()["name"].toString()+" ("+QString("%1").arg(code)+")");
+				return i;
+			}
+		} else if(currentCode.isArray()) {
+			if(blob.mid(offset+SIZE_INT, 32).startsWith(componentApeCodes[i])) {
+				window->log("Found component: "+components[i].toObject()["name"].toString());
+				return i;
+			}
+		}
+	}
+	window->log("Found unknown component (code: "+QString("%1").arg(code)+")", /*error*/true);
+	return -code;
 }
 
 void

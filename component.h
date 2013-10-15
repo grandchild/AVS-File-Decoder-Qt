@@ -13,21 +13,31 @@
 
 class Component
 {
+public:
+    Component(QByteArray blob,
+			  uint offset,
+			  uint end,
+			  QString name,
+			  QString group,
+			  QString function,
+			  QJsonObject fields = QJsonObject(),
+			  MainWindow* window = NULL);
+    QJsonObject decode() throw(ConvertException);
+	static uint getUInt32(QByteArray blob, uint offset);
+	
 private:
+	QByteArray blob;
+	uint offset;
+	uint end;
     QString name;
-    unsigned int code;
     QString group;
     QString function;
     QJsonObject fields;
-	MainWindow* window;
-	
-    QJsonObject decodeGeneric(QByteArray blob, uint offset, uint end) throw(ConvertException);
-	QJsonObject callSizeFunction(QString function, QByteArray blob, uint offset, QJsonValue other = QJsonValue()) throw(ConvertException);
-	uint getUInt32(QByteArray blob, uint offset);
-	void log(QString message);
-public:
-    Component(QString name, unsigned int code, QString group, QString function, QJsonObject fields = QJsonObject(), MainWindow* window = NULL);
-    QJsonObject decode(QByteArray blob, uint offset, uint end) throw(ConvertException);
+    MainWindow* window;
+    
+    QJsonObject decodeGeneric() throw(ConvertException);
+    QJsonObject callSizeFunction(QString function, uint offset, QJsonValue other = QJsonValue()) throw(ConvertException);
+    void log(QString message);
 };
 
 #endif // COMPONENT_H

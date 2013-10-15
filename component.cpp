@@ -4,9 +4,18 @@
 #include <QRegExp>
 #include <QVariantList>
 
-Component::Component(QString name, unsigned int code, QString group, QString function, QJsonObject fields, MainWindow* window):
+Component::Component(QByteArray blob,
+					 uint offset,
+					 uint end,
+					 QString name,
+					 QString group,
+					 QString function,
+					 QJsonObject fields,
+					 MainWindow* window):
+	blob(blob),
+	offset(offset),
+	end(end),
 	name(name),
-	code(code),
 	group(group),
 	function(function),
 	fields(fields),
@@ -15,15 +24,15 @@ Component::Component(QString name, unsigned int code, QString group, QString fun
 }
 
 QJsonObject
-Component::decode(QByteArray blob, uint offset, uint end) throw(ConvertException) {
+Component::decode() throw(ConvertException) {
 	if(QString::compare(function, "generic")==0) {
-		return decodeGeneric(blob, offset, end);
+		return decodeGeneric();
 	}
 	return QJsonObject();
 }
 
 QJsonObject
-Component::decodeGeneric(QByteArray blob, uint offset, uint end) throw(ConvertException){
+Component::decodeGeneric() throw(ConvertException){
 	QJsonObject comp;
 	comp["type"] = name.remove(' ');
 	QStringList keys = fields.keys();
@@ -61,7 +70,7 @@ Component::decodeGeneric(QByteArray blob, uint offset, uint end) throw(ConvertEx
 			}
 			lastWasABitField = false;
 		} else if(func) {
-			result = callSizeFunction(function, blob, offset);
+			result = callSizeFunction(function, offset);
 			value = result["value"];
 			size = (uint)(result["size"].toDouble());
 			lastWasABitField = false;
@@ -75,10 +84,10 @@ Component::decodeGeneric(QByteArray blob, uint offset, uint end) throw(ConvertEx
 			} else {
 				lastWasABitField = false;
 			}
-			result = callSizeFunction(function, blob, offset, fArray[1]);
+			result = callSizeFunction(function, offset, fArray[1]);
 			value = result["value"];
 			if(fArray.size()>=2) { // further processing if wanted
-				value = callSizeFunction(fArray[2].toString(), blob, offset, value);
+				value = callSizeFunction(fArray[2].toString(), offset, value);
 			}
 			size = (uint)(result["size"].toDouble());
 		}
@@ -92,7 +101,7 @@ Component::decodeGeneric(QByteArray blob, uint offset, uint end) throw(ConvertEx
 }
 
 QJsonObject
-Component::callSizeFunction(QString function, QByteArray blob, uint offset, QJsonValue other) throw(ConvertException) {
+Component::callSizeFunction(QString function, uint offset, QJsonValue other) throw(ConvertException) {
 	if(function=="UInt32") {
 		QJsonObject map;
 		map["value"] = (double)getUInt32(blob, offset);
