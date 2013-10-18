@@ -9,7 +9,7 @@
 #include <QHash>
 
 #include "mainwindow.h"
-#include "convertexception.h"
+//#include "convertexception.h"
 
 class Converter
 {
@@ -32,15 +32,15 @@ private:
     QFileInfoList fileList;
 	MainWindow* window;
 	
-	QHash<int, QByteArray> componentApeCodes;
+	QHash<int, QByteArray> componentDllCodes;
 	bool stop; // stops execution if set to true
 	bool error; // some error occurred
     
     void loadConfig();
 	void setFileList();
 	
-	QJsonValue decodePresetHeader(QByteArray blob) throw(ConvertException);
-	QJsonArray decodeComponents(QByteArray blob, uint offset) throw(ConvertException);
+	QJsonValue decodePresetHeader(QByteArray blob);
+	QJsonArray decodeComponents(QByteArray blob, uint offset);
 	int getComponentIndex(uint code, QByteArray blob, uint offset);
 };
 

@@ -1,5 +1,5 @@
 {
-	"blendmodesIn" : {
+	"blendmodeIn": {
 		 "0": "Ignore",
 		 "1": "Replace",
 		 "2": "50/50",
@@ -15,7 +15,7 @@
 		"12": "Buffer"
 	},
 	
-	"blendmodesOut": {
+	"blendmodeOut": {
 		 "0": "Replace",
 		 "1": "Ignore",
 		 "2": "Maximum",
@@ -31,7 +31,7 @@
 		"13": "Buffer"
 	},
 	
-	"blendmodesBuffer": {
+	"blendmodeBuffer": {
 		 "0": "Replace",
 		 "1": "50/50",
 		 "2": "Additive",
@@ -46,7 +46,7 @@
 		"11": "Adjustable"
 	},
 	
-	"blendmodesRender": {
+	"blendmodeRender": {
 		"0": "Replace",
 		"1": "Additive",
 		"2": "Maximum",
@@ -58,7 +58,21 @@
 		"8": "XOR"
 	},
 	
-	"blendmodesColorMap": {
+	"blendmodePicture2": {
+		 "0": "Replace",
+		 "1": "Additive",
+		 "2": "Maximum",
+		 "3": "Minimum",
+		 "4": "50/50",
+		 "5": "Dest-Src",
+		 "6": "Src-Dest",
+		 "7": "Multiply",
+		 "8": "XOR",
+		 "9": "Adjustable",
+		"10": "Ignore"
+	},
+	
+	"blendmodeColorMap": {
 		"0": "Replace",
 		"1": "Additive",
 		"2": "Maximum",
@@ -70,7 +84,7 @@
 		"8": "XOR"
 	},
 	
-	"keysColorMap": {
+	"keyColorMap": {
 		"0": "Red",
 		"1": "Green",
 		"2": "Blue",
@@ -79,13 +93,13 @@
 		"5": "(R+G+B)/3"
 	},
 	
-	"cycleModesColorMap": {
+	"cyclemodeColorMap": {
 		"0": "None (Map 1)",
 		"1": "OnBeat Random",
 		"2": "OnBeat Sequential"
 	},
 	
-	"buffermodes": {
+	"buffermode": {
 		"0": "Save",
 		"1": "Restore",
 		"2": "AlternateSaveRestore",
@@ -97,35 +111,35 @@
 		"1": "Cartesian"
 	},
 	
-	"drawModes": {
+	"drawMode": {
 		"0": "Dots",
 		"1": "Lines"
 	},
 	
-	"audioChannels": {
+	"audioChannel": {
 		"0": "Left",
 		"1": "Right",
 		"2": "Center"
 	},
 	
-	"audioSources": {
+	"audioSource": {
 		"0": "Waveform",
 		"1": "Spectrum"
 	},
 	
-	"positionsX": {
+	"positionX": {
 		"0": "Left",
 		"1": "Right",
 		"2": "Center"
 	},
 	
-	"positionsY":{
+	"positionY": {
 		"0": "Top",
 		"1": "Bottom",
 		"2": "Center"
 	},
 	
-	"movementEffects":{
+	"movementEffects": {
 		 "0": ["None", "", 0],
 		 "1": ["Slight Fuzzify", "", 0],
 		 "2": ["Shift Rotate Left", "x=x+1/32; // use wrap for this one", 1],
@@ -150,5 +164,44 @@
 		"21": ["Grapevine", "x = x + (cos(abs(y-.5) * 8) * .02);\r\ny = y + (sin(abs(x-.5) * 8) * .05);\r\nx = x * .95;\r\ny = y * .95;", 1],
 		"22": ["Quadrant", "y = y * ( 1 + (sin(r + $PI/2) * .3) );\r\nx = x * ( 1 + (cos(r + $PI/2) * .3) );\r\nx = x * .995;\r\ny = y * .995;", 1],
 		"23": ["6-way Kaleida (use Wrap!)", "y = (r*6)/($PI); x = d;", 1]
-	}
+	},
+	
+	"codePFBI": [
+		["init", 3],
+		["perFrame", 1],
+		["onBeat", 2],
+		["perPoint", 0]
+	],
+	
+	"codeFBI": [
+		["init", 2],
+		["perFrame", 1],
+		["onBeat", 0]
+	],
+	
+	"codeIFBP": [
+		["init", 0],
+		["perFrame", 1],
+		["onBeat", 2],
+		["perPoint", 3]
+	],
+	
+	"codeIFB": [
+		["init", 0],
+		["perFrame", 1],
+		["onBeat", 2]
+	],
+	
+	"codeIFBnt": [
+		["init", 0],
+		["perFrame", 1],
+		["onBeat", 2]
+	],
+	
+	"codeIFBPnt": [
+		["init", 0],
+		["perFrame", 1],
+		["onBeat", 2],
+		["perPoint", 3]
+	]
 }

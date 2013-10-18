@@ -14,13 +14,13 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     converter.cpp \
-    component.cpp
+    components.cpp
 
 HEADERS  += mainwindow.h \
     converter.h \
-    component.h \
     convertexception.h \
-    defines.h
+    defines.h \
+    components.h
 
 FORMS    += mainwindow.ui
 

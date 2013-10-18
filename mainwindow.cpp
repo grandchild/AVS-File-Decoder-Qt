@@ -60,6 +60,7 @@ MainWindow::on_convertButton_clicked()
 {
 	ui->cancelButton->setDisabled(false);
 	ui->convertButton->setDisabled(true);	
+	resetProgress();
 	
 	if(converter==NULL) {
 		converter = new Converter(
