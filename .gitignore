@@ -6,3 +6,4 @@
 *.lib
 
 *.pro.user
+*.pro.user.*
