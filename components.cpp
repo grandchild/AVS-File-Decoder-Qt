@@ -15,7 +15,9 @@ Components::Components(QJsonArray* components,
 	componentDllCodes(componentDllCodes),
 	blob(blob),
 	offset(offset),
-	window(window)
+	window(window),
+	error_(false),
+	errorCount_(0)
 {}
 
 QJsonArray
@@ -54,17 +56,17 @@ Components::getComponentIndex(uint code) {
 		QJsonValue currentCode = components->at(i).toObject()["code"];
 		if(currentCode.isString()) {
 			if(code == (uint)(currentCode.toString().toUInt(0,0))) {
-				window->log("Found component: "+components->at(i).toObject()["name"].toString()+" ("+QString("%1").arg(code)+")");
+				log("Found component: "+components->at(i).toObject()["name"].toString()+" ("+QString("%1").arg(code)+")");
 				return i;
 			}
 		} else if(currentCode.isArray()) {
 			if(blob.mid(offset+SIZE_INT, 32).startsWith(componentDllCodes->value(i))) {
-				window->log("Found component: "+components->at(i).toObject()["name"].toString());
+				log("Found component: "+components->at(i).toObject()["name"].toString());
 				return i;
 			}
 		}
 	}
-	window->log("Found unknown component (code: "+QString("%1").arg(code)+")", /*error*/true);
+	log("Found unknown component (code: "+QString("%1").arg(code)+")", /*error*/true);
 	return -code;
 }
 
@@ -194,6 +196,8 @@ Components::decodeEffectList(uint offset) {
 	} //else: old Effect List format, inside components just start
 	Components content(components, tables, componentDllCodes, blob.mid(contOffset, contSize), 0, window);
 	comp["components"] = content.decode();
+	error_ |= content.error();
+	errorCount_ += content.errorCount();
 	return comp;
 }
 
@@ -628,8 +632,19 @@ Components::uInt64(QByteArray blob, uint offset) {
 }
 
 
-// log() wrapper, bit unnecessary, but hey...
 void
 Components::log(QString message, bool error) {
+	if(error) error_ = true;
 	window->log(message, error);
+}
+
+bool
+Components::error() {
+	//window->log(QString("Error count: %1").arg(errCount), true);
+	return error_;
+}
+
+int
+Components::errorCount() {
+	return errorCount_;
 }

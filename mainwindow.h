@@ -25,6 +25,7 @@ public:
 	void incrProgress();
 	void resetProgress();
 	void setSampleName(QString name);
+	bool indent();
 	
 private slots:
 	void on_convertButton_clicked();
@@ -34,11 +35,13 @@ private slots:
 	void on_listFilesButton_clicked();
 	void on_inputPathEdit_textChanged(const QString &inPath);
 	void on_outputPathEdit_textChanged(const QString &outPath);
+	void on_samplePresetSelectBox_currentIndexChanged(int index);
 	
 private:
 	Ui::MainWindow* ui;
 	Converter* converter;
 	double progressIncr;
+	QString noneText;
 	
 	void selectDirPath(QLineEdit* pathEdit);
 	void updatePath(QString path, QLineEdit* lineEdit);

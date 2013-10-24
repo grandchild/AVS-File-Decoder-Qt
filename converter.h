@@ -18,9 +18,8 @@ public:
     
     QStringList getFileNameList();
 	void logComponents();
-    QString convertAll();
-    QString convertAll(QString inPath);
-	QString convertSingle(QFileInfo file);
+	bool convert(uint index);
+	bool convertAll();
 	void setStop();
 	
 private:
@@ -38,6 +37,8 @@ private:
     
     void loadConfig();
 	void setFileList();
+	
+	QString convertSingle(QFileInfo file);
 	
 	QJsonValue decodePresetHeader(QByteArray blob);
 	QJsonArray decodeComponents(QByteArray blob, uint offset);

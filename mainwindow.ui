@@ -99,7 +99,7 @@
       </widget>
      </item>
      <item row="1" column="3">
-      <widget class="QCheckBox" name="checkBox">
+      <widget class="QCheckBox" name="indentCheckBox">
        <property name="toolTip">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Ctrl+P&lt;/p&gt;&lt;p&gt;Uncheck this to save file size.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
@@ -202,6 +202,9 @@
         <layout class="QHBoxLayout" name="outputInfoLayout" stretch="0,1">
          <item>
           <widget class="QLabel" name="samplePresetLabel">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
            <property name="font">
             <font>
              <weight>50</weight>
@@ -214,16 +217,33 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="samplePresetNameLabel">
+          <widget class="QComboBox" name="samplePresetSelectBox">
            <property name="font">
             <font>
              <weight>75</weight>
-             <italic>false</italic>
              <bold>true</bold>
             </font>
            </property>
-           <property name="text">
-            <string>[ not running ]</string>
+           <property name="editable">
+            <bool>false</bool>
+           </property>
+           <property name="currentText">
+            <string/>
+           </property>
+           <property name="currentIndex">
+            <number>-1</number>
+           </property>
+           <property name="maxVisibleItems">
+            <number>60</number>
+           </property>
+           <property name="minimumContentsLength">
+            <number>1</number>
+           </property>
+           <property name="duplicatesEnabled">
+            <bool>true</bool>
+           </property>
+           <property name="frame">
+            <bool>false</bool>
            </property>
           </widget>
          </item>

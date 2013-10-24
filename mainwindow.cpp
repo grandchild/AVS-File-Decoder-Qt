@@ -6,15 +6,16 @@
 
 MainWindow::MainWindow(QWidget *parent) :
 	QWidget(parent),
-	ui(new Ui::MainWindow)
+	ui(new Ui::MainWindow),
+	noneText("[none]")
 {
 	ui->setupUi(this);
 	ui->cancelButton->setDisabled(true);
 	converter = NULL;
+	ui->samplePresetSelectBox->addItem(noneText);
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
 	delete ui;
 }
 
@@ -52,8 +53,16 @@ MainWindow::resetProgress() {
 
 void
 MainWindow::setSampleName(QString name) {
-	ui->samplePresetNameLabel->setText(name);
+	int curIndex = ui->samplePresetSelectBox->findData(name);
+	ui->samplePresetSelectBox->setCurrentIndex(curIndex);
 }
+
+bool
+MainWindow::indent() {
+	return ui->indentCheckBox->isChecked();
+}
+
+// Slots
 
 void
 MainWindow::on_convertButton_clicked()
@@ -89,19 +98,22 @@ MainWindow::on_inputPathButton_clicked()
 	selectDirPath(ui->inputPathEdit);
 }
 
-void MainWindow::on_outputPathButton_clicked()
+void
+MainWindow::on_outputPathButton_clicked()
 {
 	selectDirPath(ui->outputPathEdit);
 }
 
-void MainWindow::selectDirPath(QLineEdit* pathEdit) {
+void
+MainWindow::selectDirPath(QLineEdit* pathEdit) {
 	QString selectedDir = QFileDialog::getExistingDirectory(this, "", pathEdit->text());
 	if(!selectedDir.isEmpty()) {
 		pathEdit->setText(selectedDir);
 	}
 }
 
-void MainWindow::on_listFilesButton_clicked()
+void
+MainWindow::on_listFilesButton_clicked()
 {
 	if(converter==NULL) {
 		converter = new Converter(
@@ -110,22 +122,28 @@ void MainWindow::on_listFilesButton_clicked()
 					this);
 	}
 	QStringList fileList = converter->getFileNameList();
+	ui->samplePresetSelectBox->addItems(fileList);
 	foreach (QString fileName, fileList) {
 		log(fileName);
 	}
 }
 
-void MainWindow::on_inputPathEdit_textChanged(const QString &inPath)
+void
+MainWindow::on_inputPathEdit_textChanged(const QString &inPath)
 {
+	ui->samplePresetSelectBox->clear();
+	ui->samplePresetSelectBox->addItem(noneText);
 	updatePath(inPath, ui->inputPathEdit);
 }
 
-void MainWindow::on_outputPathEdit_textChanged(const QString &outPath)
+void
+MainWindow::on_outputPathEdit_textChanged(const QString &outPath)
 {
 	updatePath(outPath, ui->outputPathEdit);
 }
 
-void MainWindow::updatePath(QString path, QLineEdit* lineEdit) {
+void
+MainWindow::updatePath(QString path, QLineEdit* lineEdit) {
 	QFileInfo dirInfo(path);
 	if(!dirInfo.exists() || !dirInfo.isDir()) {
 		lineEdit->setStyleSheet("color: red;");
@@ -138,4 +156,18 @@ void MainWindow::updatePath(QString path, QLineEdit* lineEdit) {
 		log("Converter reset.");
 	}
 	resetProgress();
+}
+
+void
+MainWindow::on_samplePresetSelectBox_currentIndexChanged(int index)
+{
+	if(ui->convertButton->isEnabled() and index>0) {
+		if(converter==NULL) {
+			converter = new Converter(
+						ui->inputPathEdit->text(),
+						ui->outputPathEdit->text(),
+						this);
+		}
+		converter->convert(index-1);
+	}
 }

@@ -100,12 +100,15 @@ Converter::getFileNameList() {
 	return fileNameList;
 }
 
-QString
-Converter::convertAll(QString inPath) {
-	if(error) return QString();
-    this->inPath = inPath;
-	setFileList();
-    return convertAll();
+bool
+Converter::convert(uint index) {
+	if(error) return false;
+	if(fileList.empty()) {
+		setFileList();
+	}
+	QString json = convertSingle(fileList[index]);
+	window->output(json);
+	return true;
 }
 
 void
@@ -113,26 +116,22 @@ Converter::logComponents() {
 	window->log("Comps: "+QString(QJsonDocument(components).toJson(QJsonDocument::Compact)));
 }
 
-QString
+bool
 Converter::convertAll() {
-	if(error) return QString();
+	if(error) return false;
 	window->setProgressMax(fileList.length()-1); // why it's length()-1 i have no idea...
 	foreach(QFileInfo file, fileList) {
 		if(stop || error) break;
 		QString json = convertSingle(file);
 		bool ok = !json.isEmpty();
 		if(ok) {
-			window->log("<b>"+file.fileName()+"</b> converted.");
-			window->setSampleName(file.fileName());
 			// write to file here...
 			window->output(json);
-		} else {
 		}
 		window->incrProgress();
 	}
-	return QString();
+	return true;
 }
-
 
 QString
 Converter::convertSingle(QFileInfo file) {
@@ -164,21 +163,25 @@ Converter::convertSingle(QFileInfo file) {
 						 /*offset*/AVS_HEADER_LENGTH,
 						 window);
 		rootObj["components"] = comps.decode();
+		ok &= !comps.error();
 	} else {
-	//} catch(ConvertException e) {
-		window->log("Failed to convert '"+file.fileName()+"'.", /*error*/true);
-		return "{\n\t\"error\": \"Invalid header\"\n}";
+		window->log("Invalid header", /*error*/true);
+		ok = false;
 	}
 	
 	preset.setObject(rootObj);
 	
-	QString json = preset.toJson(QJsonDocument::Indented);
-	ok = !json.isEmpty();
-	if(ok) {
-		return json;
-	} else {
-		window->log("Output for '"+file.fileName()+"' is empty.", /*error*/true);
+	QString json = preset.toJson(window->indent() ? QJsonDocument::Indented : QJsonDocument::Compact);
+	if(json.isEmpty()) {
+		window->log("JSON output is empty.", /*error*/true);
+		ok = false;
+	}
+	if(!ok) {
+		window->log("Failed to convert <b>"+file.fileName()+"</b>.", /*error*/true);
 		return "";
+	} else {
+		window->log("<b>"+file.fileName()+"</b> converted.");
+		return json;
 	}
 }
 
@@ -186,13 +189,12 @@ QJsonValue
 Converter::decodePresetHeader(QByteArray blob) {
 	QByteArray presetHeader0_1("Nullsoft AVS Preset 0.1");
 	QByteArray presetHeader0_2("Nullsoft AVS Preset 0.2");
-	presetHeader0_1[AVS_HEADER_LENGTH-2] = 0x1A; // there is one final '26' byte after the readable header...
-	presetHeader0_2[AVS_HEADER_LENGTH-2] = 0x1A; // ...and repurpose the \0 byte position from the str ctor above.
+	presetHeader0_1[AVS_HEADER_LENGTH-2] = 0x1A; // there is one final '26' byte after the readable header ...
+	presetHeader0_2[AVS_HEADER_LENGTH-2] = 0x1A; // ... for that repurpose the \0 byte position from the str c'tor above.
 	if(!blob.startsWith(presetHeader0_2) &&
 		!blob.startsWith(presetHeader0_1)) { // 0.1 only if 0.2 failed because it's far rarer.
 		window->log("Invalid preset header.", /*error*/true);
 		return QJsonValue(0);
-		//throw new ConvertException("Invalid preset header.");
 	}
 	return QJsonValue(blob[AVS_HEADER_LENGTH-1]==(char)1); // "Clear Every Frame"
 }
