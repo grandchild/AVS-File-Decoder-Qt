@@ -23,14 +23,18 @@ Components::decode() {
 	QJsonArray componentArray;
 	while(offset < (uint)blob.length()) {
 		uint code = Components::uInt32(blob, offset);
-		int i = getComponentIndex(code, blob, offset);
+		int i = getComponentIndex(code);
 		bool isDll = code!=0xfffffffe && code>BUILTIN_MAX;
 		uint size = Components::uInt32(blob, offset+SIZE_INT+isDll*32);
+		if(size==0) {
+			log(QString("Component size at offset %1 is zero.").arg(offset), /*error*/true);
+			break;
+		}
 		QJsonObject res;
+		offset += SIZE_INT*2+isDll*32;
 		if(i<0) {
-			res["type"] = QJsonValue("Unknown: ("+QString("%1").arg(-i)+")");
+			res["type"] = QJsonValue("Unknown component: ("+QString("%1").arg(-i)+")");
 		} else {
-			offset += SIZE_INT*2+isDll*32;
 			QJsonObject compConf = components->at(i).toObject();
 			res = decodeComponent(offset+size,
 								  compConf["name"].toString(),
@@ -39,13 +43,13 @@ Components::decode() {
 								  compConf["fields"].toArray());
 		}
 		componentArray.append(res);
-		offset += size + SIZE_INT*2 + isDll*32;
+		offset += size;
 	}
 	return componentArray;
 }
 
 int
-Components::getComponentIndex(uint code, QByteArray blob, uint offset) {
+Components::getComponentIndex(uint code) {
 	for (int i = 0; i < components->size(); i++) {
 		QJsonValue currentCode = components->at(i).toObject()["code"];
 		if(currentCode.isString()) {
@@ -69,24 +73,27 @@ Components::getComponentIndex(uint code, QByteArray blob, uint offset) {
 QJsonObject
 Components::decodeComponent(uint end, QString name, QString group, QString function, QJsonArray fields) {
 	if(function == "generic") {
-		return decodeGeneric(end, name, group, fields);
+		return decodeGeneric(offset, end, name, group, fields);
 	} else if(function == "movement") {
-		return decodeMovement();
+		return decodeMovement(offset);
 	} else if(function == "effectList") {
-		return decodeEffectList();
+		return decodeEffectList(offset);
 	} else if(function == "simple") {
-		return decodeSimple();
+		return decodeSimple(offset);
 	} else if(function == "avi") {
-		return decodeAvi();
+		return decodeAvi(offset);
 	}
-	log("Decode function for '"+function+"' was not found.");
+	log("Decode function for '"+function+"' was not found.", /*error*/true);
 	return QJsonObject();
 }
 
 QJsonObject
-Components::decodeGeneric(uint end, QString name, QString group, QJsonArray fields) {
+Components::decodeGeneric(uint offset, uint end, QString name, QString group, QJsonArray fields) {
 	QJsonObject comp;
 	comp["type"] = name.remove(' ');
+	if(ALL_FIELDS) {
+		comp["group"] = group;
+	}
 	bool lastWasABitField = false;
 	for (int i = 0; i < fields.size(); ++i) {
 		if(offset >= end) {
@@ -95,7 +102,7 @@ Components::decodeGeneric(uint end, QString name, QString group, QJsonArray fiel
 		}
 		QString k = fields[i].toObject().keys()[0];
 		QJsonValue f = fields[i].toObject()[k];
-		log("Field: "+k);
+		if(VERBOSE) log("Field: "+k);
 		if(QRegExp("^null[_0-9]*$").exactMatch(k)) {
 			offset += (uint)f.toDouble();
 			// '"null_": "0"' resets bitfield continuity to allow several consecutive bitfields (hasn't been necessary yet thogh)
@@ -103,7 +110,6 @@ Components::decodeGeneric(uint end, QString name, QString group, QJsonArray fiel
 			continue;
 		}
 		uint size = 0;
-		QJsonObject result;
 		QJsonValue value;
 		bool number = f.isDouble();
 		bool func = f.isString();
@@ -123,14 +129,11 @@ Components::decodeGeneric(uint end, QString name, QString group, QJsonArray fiel
 			}
 			lastWasABitField = false;
 		} else if(func) {
-			result = callSizeFunction(f.toString(), offset);
-			if(result.size()!=2) break;
-			value = result["value"];
-			size = (uint)(result["size"].toDouble());
+			value = call(f.toString(), offset, &size);
 			lastWasABitField = false;
 		} else if(array && f.toArray().size()>=2) {
 			QJsonArray fArray = f.toArray();
-			if(fArray[0].toString()=="Bit") {
+			if(fArray[0].toString()=="bit") {
 				if(lastWasABitField) {
 					offset -= 1; // compensate to stay in same bitfield
 				}
@@ -138,15 +141,11 @@ Components::decodeGeneric(uint end, QString name, QString group, QJsonArray fiel
 			} else {
 				lastWasABitField = false;
 			}
-			result = callSizeFunction(fArray[0].toString(), offset, fArray[1]);
-			if(result.size()!=2) break;
-			value = result["value"];
+			value = call(fArray[0].toString(), offset, &size, fArray[1]);
 			if(fArray.size()>2) { // further processing if wanted
-				value = call2ndFunction(fArray[2].toString(), offset, value);
-				if(result.size()!=2) break;
+				value = call2nd(fArray[2].toString(), value);
 			}
-			log(QString("Size: %1").arg(result["size"].toDouble()));
-			size = (uint)(result["size"].toDouble());
+			if(VERBOSE) log(QString("Size: %1").arg(size));
 		}
 		
 		// save value or function result of value in field
@@ -158,132 +157,232 @@ Components::decodeGeneric(uint end, QString name, QString group, QJsonArray fiel
 }
 
 QJsonObject
-Components::decodeMovement() {
-	return QJsonObject();
+Components::decodeEffectList(uint offset) {
+	uint size = uInt32(blob, offset-SIZE_INT);
+	QJsonObject comp;
+	
+	comp["type"] = QString("EffectList");
+	comp["enabled"] = bit(offset, 1)!=1;
+	comp["clearFrame"] = bit(offset, 0)==1;
+	comp["input"] = call("blendmodeIn", offset+2, NULL, 1);
+	comp["output"] = call("blendmodeOut", offset+3, NULL, 1);
+	//ignore constant el config size of 36 bytes (9 x int32)
+	comp["inAdjustBlend"] = (double)uInt32(blob, offset+5);
+	comp["outAdjustBlend"] = (double)uInt32(blob, offset+9);
+	comp["inBuffer"] = (double)uInt32(blob, offset+13);
+	comp["outBuffer"] = (double)uInt32(blob, offset+17);
+	comp["inBufferInvert"] = uInt32(blob, offset+21)==1;
+	comp["outBufferInvert"] = uInt32(blob, offset+25)==1;
+	comp["enableOnBeat"] = uInt32(blob, offset+29)==1;
+	comp["onBeatFrames"] = (double)uInt32(blob, offset+33);
+	
+	QByteArray effectList28plusHeader = "AVS 2.8+ Effect List Config";
+	uint extOffset = offset+41;
+	uint contSize = size-41;
+	uint contOffset = extOffset;
+	if(blob.mid(extOffset, 32).startsWith(effectList28plusHeader)) {
+		extOffset += 32;
+		uint extSize = uInt32(blob, extOffset);
+		contSize = size-41-32-SIZE_INT-extSize;
+		contOffset += 32+SIZE_INT+extSize;
+		QJsonObject code;
+		code["enabled"] = boolean(extOffset+SIZE_INT, SIZE_INT);
+		uint initSize = uInt32(blob, extOffset+SIZE_INT*2);
+		code["init"] = sizeString(extOffset+SIZE_INT*2);
+		code["frame"] = sizeString(extOffset+SIZE_INT*3+initSize);
+		comp["code"] = code;
+	} //else: old Effect List format, inside components just start
+	Components content(components, tables, componentDllCodes, blob.mid(contOffset, contSize), 0, window);
+	comp["components"] = content.decode();
+	return comp;
 }
 
 QJsonObject
-Components::decodeEffectList() {
-	return QJsonObject();
-}
-
-QJsonObject
-Components::decodeSimple() {
-	return QJsonObject();
-}
-
-QJsonObject
-Components::decodeAvi() {
-	return QJsonObject();
-}
-
-QJsonObject
-Components::callSizeFunction(QString function, uint offset, QJsonValue other) {
-	QJsonObject tuple;
-	if(QRegExp("code[IFBP]{3,4}(nt)?").exactMatch(function)) {
-		// (Point,) Frame, Beat, Init code fields, in various arrangements - read and reorder to I,F,B(,P).
-		// look up the sort map from 'tables.json', lines are 'need'-sorted with 'is'-index.
-		log("Table code fields function '"+function+"'.");
-		return codeSection(offset, tables->value(function).toArray(), function.endsWith("nt"));
-	} else if(tables->contains(function)) { // one of the generic table->value lookups
-		QString code = QString("%1").arg((uint)(other.toDouble()<1.001 ? blob[offset] : uInt32(blob, offset)));
-		tuple["value"] = tables->value(function).toObject()[code];
-		tuple["size"] = other.toDouble();
-	} else if(function=="sizeString") {
-		QJsonObject result = sizeString(offset, (uint)other.toDouble());
-		tuple["value"] = result["value"].toString();
-		tuple["size"] = result["size"].toDouble();
-	} else if(function=="ntString") {
-		QJsonObject result = ntString(offset);
-		tuple["value"] = result["value"].toString();
-		tuple["size"] = result["size"].toDouble();
-	} else if(function=="int32") {
-		tuple["value"] = int32(offset)["value"].toDouble();
-		tuple["size"] = SIZE_INT;
-	} else if(function=="map1") {
-		tuple["value"] = map1(offset, other.toObject())["value"].toString();
-		tuple["size"] = 1;
-	} else if(function=="map4") {
-		tuple["value"] = map4(offset, other.toObject())["value"].toString();
-		tuple["size"] = SIZE_INT;
-	} else if(function=="map8") {
-		tuple["value"] = map8(offset, other.toObject())["value"].toString();
-		tuple["size"] = SIZE_INT*2;
-	} else if(function=="radioButton") {
-		QJsonObject result = radioButton(offset, other.toObject());
-		tuple["value"] = result["value"].toString();
-		tuple["size"] = result["size"].toDouble();
-	} else if(function=="bufferNum") {
-		tuple["value"] = bufferNum(offset, (uint)other.toDouble())["value"].toDouble();
-		tuple["size"] = other.toDouble();
-	} else if(function=="colorList") {
-		QJsonObject result = colorList(offset);
-		tuple["value"] = result["value"].toArray();
-		tuple["size"] = result["size"].toDouble();
-	} else if(function=="colorMaps") {
-		QJsonObject result = colorMaps(offset);
-		tuple["value"] = result["value"].toArray();
-		tuple["size"] = result["size"].toDouble();
-	} else if(function=="convoFilter") {
-		QJsonObject result = convoFilter(offset, other);
-		tuple["value"] = result["value"].toObject();
-		tuple["size"] = result["size"].toDouble();
-	} else if(function=="boolean") {
-		tuple["value"] = boolean(offset, (uint)other.toDouble())["value"].toBool();
-		tuple["size"] = other.toDouble();
-	} else if(function=="bit") {
-		tuple["value"] = bit(offset, other)["value"].toDouble();
-		tuple["size"] = 1;
+Components::decodeMovement (uint offset) {
+	QJsonObject comp;
+	comp["type"] = QString("Movement");
+	// the special value 0 is because "old versions of AVS barf" if the id is > 15, so
+	// AVS writes out 0 in that case, and sets the actual id at the end of the save block.
+	uint effectIdOld = uInt32(blob, offset);
+	QJsonArray effect;
+	QJsonValue code;
+	if(effectIdOld!=0) {
+		if(effectIdOld==32767) {
+			uint sizeOut = 0;
+			code = sizeString(offset+SIZE_INT+1, 0, &sizeOut); // for some reason there is a single byte reading '0x01' before custom code.
+			offset += sizeOut;
+		} else {
+			effect = tables->value("movementEffects").toObject()[QString("%1").arg(effectIdOld)].toArray();
+		}
 	} else {
-		log("Unknown function '"+function+"'.", /*error*/true);
+		uint effectIdNew = uInt32(blob, offset+SIZE_INT*6); // 1*SIZE_INT, because of oldId=0, and 5*SIZE_INT because of the other settings.
+		effect = tables->value("movementEffects").toObject()[QString("%1").arg(effectIdNew)].toArray();
 	}
-	qDebug() << "Function: '" << function << "', result: '" << tuple["value"] << "'.";
-	return tuple;
+	if(effect.size()) {
+		comp["builtinEffect"] = effect[0].toString();
+	}
+	comp["output"] = QString(uInt32(blob, offset+SIZE_INT)==1 ? "50/50" : "Replace");
+	comp["sourceMapped"] = boolean(offset+SIZE_INT*2, SIZE_INT);
+	comp["coordinates"] = call("coordinates", offset+SIZE_INT*3, NULL, SIZE_INT);
+	comp["bilinear"] = boolean(offset+SIZE_INT*4, SIZE_INT);
+	comp["wrap"] = boolean(offset+SIZE_INT*5, SIZE_INT);
+	if(effect.size() && effectIdOld!=1 && effectIdOld!=7) { // 'slight fuzzify' and 'blocky partial out' have no script representation.
+		code = effect[1];
+		comp["coordinates"] = call("coordinates", effect[2].toDouble()); // overwrite
+	}
+	comp["code"] = code;
+	offset += SIZE_INT*(6+(effectIdOld==0));
+	return comp;
+}
+
+QJsonObject
+Components::decodeAvi (uint offset) {
+	QJsonObject comp;
+	uint sizeOut = 0;
+	comp["type"] = QString("AVI");
+	comp["enabled"] = boolean(offset, SIZE_INT);
+	QString str = ntString(offset+SIZE_INT*3, &sizeOut);
+	comp["file"] = str;
+	comp["speed"] = (double)uInt32(blob, offset+SIZE_INT*5+sizeOut); // 0: fastest, 1000: slowest
+	uint beatAdd = uInt32(blob, offset+SIZE_INT*3+sizeOut);
+	if(beatAdd==1) {
+		comp["output"] = QString("50/50");
+	} else {
+		QJsonObject map;
+		map["0"] = QString("Replace");
+		map["1"] = QString("Additive");
+		map["0x100000000"] = QString("50/50");
+		comp["output"] = map8(offset+SIZE_INT, map);
+	}
+	comp["onBeatAdd"] = (double)beatAdd;
+	comp["persist"] = (double)uInt32(blob, offset+SIZE_INT*4+sizeOut); // 0-32
+	return comp;
+}
+
+QJsonObject
+Components::decodeSimple (uint offset) {
+	QJsonObject comp;
+	comp["type"] = QString("Simple");
+	uint effect = uInt32(blob, offset);
+	if (effect&(1<<6)) {
+		comp["audioSource"] = QString((effect&2)!=0 ? "Waveform" : "Spectrum");
+		comp["renderType"] = QString("Dots");
+	} else {
+		switch (effect&3) {
+			case 0: // solid analyzer
+				comp["audioSource"] = QString("Spectrum");
+				comp["renderType"] = QString("Solid");
+				break;
+			case 1: // line analyzer
+				comp["audioSource"] = QString("Spectrum");
+				comp["renderType"] = QString("Lines");
+				break;
+			case 2: // line scope
+				comp["audioSource"] = QString("Waveform");
+				comp["renderType"] = QString("Lines");
+				break;
+			case 3: // solid scope
+				comp["audioSource"] = QString("Waveform");
+				comp["renderType"] = QString("Solid");
+				break;
+		}
+	}
+	comp["audioChannel"] = call2nd("audioChannel", (double)((effect>>2)&3));
+	comp["positionY"] = call2nd("positionY", (double)((effect>>4)&3));
+	comp["colors"] = colorList(offset+SIZE_INT);
+	return comp;
 }
 
 QJsonValue
-Components::call2ndFunction(QString function, uint offset, QJsonValue value) {
-	QJsonValue retVal = QJsonValue::Undefined;
-	if(tables->contains(function)) { // one of the generic table->value lookups
-		QString code = QString("%1").arg((uint)(value.toDouble()<1.001 ? blob[offset] : uInt32(blob, offset)));
-		return tables->value(function).toObject()[code];
-	} else if(function=="boolified") {
-		return value!=0;
+Components::call(QString function, uint offset, uint* sizeOut, QJsonValue other) {
+	QJsonValue value;
+	if(QRegExp("code[IFBP]{3,4}(nt)?").exactMatch(function)) {
+		// (Point,) Frame, Beat, Init code fields, in various arrangements - read and reorder to I,F,B(,P).
+		// look up the sort map from 'tables.json', lines are 'need'-sorted with 'is'-index.
+		if(VERBOSE) log("Table code fields function '"+function+"'.");
+		return codeSection(offset, tables->value(function).toArray(), function.endsWith("nt"), sizeOut);
+	} else if(tables->contains(function)) { // one of the generic table->value lookups
+		QString code = QString("%1").arg((uint)(other.toDouble()<1.001 ? blob[offset] : uInt32(blob, offset)));
+		if(sizeOut) *sizeOut = (uint)other.toDouble();
+		value = tables->value(function).toObject()[code];
+	} else if(function=="sizeString") {
+		value = sizeString(offset, (uint)other.toDouble(), sizeOut);
+	} else if(function=="ntString") {
+		value = ntString(offset, sizeOut);
+	} else if(function=="uInt32") {
+		if(sizeOut) *sizeOut = SIZE_INT;
+		value = (double)uInt32(blob, offset);
+	} else if(function=="int32") {
+		value = (double)int32(offset, sizeOut);
+	} else if(function=="float32") {
+		value = float32(offset, sizeOut);
+	} else if(function=="boolean") {
+		value = boolean(offset, (uint)other.toDouble(), sizeOut);
+	} else if(function=="bit") {
+		value = bit(offset, other, sizeOut);
+	} else if(function=="map1") {
+		if(sizeOut) *sizeOut = 1;
+		value = map1(offset, other.toObject());
+	} else if(function=="map4") {
+		if(sizeOut) *sizeOut = SIZE_INT;
+		value = map4(offset, other.toObject());
+	} else if(function=="map8") {
+		if(sizeOut) *sizeOut = SIZE_INT*2;
+		value = map8(offset, other.toObject());
+	} else if(function=="radioButton") {
+		value = radioButton(offset, other.toObject(), sizeOut);
+	} else if(function=="bufferNum") {
+		value = bufferNum(offset, (uint)other.toDouble(), sizeOut);
+	} else if(function=="colorList") {
+		value = colorList(offset, sizeOut);
+	} else if(function=="colorMaps") {
+		value = colorMaps(offset, sizeOut);
+	} else if(function=="color") {
+		value = color(offset, sizeOut);
+	} else if(function=="convoFilter") {
+		value = convoFilter(offset, other, sizeOut);
 	} else {
 		log("Unknown function '"+function+"'.", /*error*/true);
-		return retVal;
+	}
+	if(VERBOSE) qDebug() << "Function: '" << function << "', result: '" << value << "'.";
+	return value;
+}
+
+QJsonValue
+Components::call2nd(QString function, QJsonValue value) {
+	if(tables->contains(function)) { // one of the generic table->value lookups
+		QString code = QString("%1").arg((uint)value.toDouble());
+		return tables->value(function).toObject()[code];
+	} else if(function=="boolified") {
+		return value.toDouble()!=0;
+	} else if(function=="semiColSplit") {
+		return semiColSplit(value.toString());
+	} else {
+		log("Unknown function '"+function+"' (2nd).", /*error*/true);
+		return QJsonValue::Undefined;
 	}
 }
 
 //// decode helpers
 
 // generic mapping functions (in 1, 4, 8 byte flavor and radio button mode (multiple int32)) to map values to one of a set of strings
-QJsonObject
-Components::map1 (uint offset, QJsonObject map) {
-	QJsonObject retVal;
-	retVal["value"] = mapping(map, blob[offset]);
-	retVal["size"] = 1;
-	return retVal;
+QJsonValue
+Components::map1(uint offset, QJsonObject map) {
+	return mapping(map, blob[offset]);
 }
 
-QJsonObject
-Components::map4 (uint offset, QJsonObject map) {
-	QJsonObject retVal;
-	retVal["value"] = mapping(map, uInt32(blob, offset));
-	retVal["size"] = SIZE_INT;
-	return retVal;
+QJsonValue
+Components::map4(uint offset, QJsonObject map) {
+	return mapping(map, uInt32(blob, offset));
 }
 
-QJsonObject
-Components::map8 (uint offset, QJsonObject map) {
-	QJsonObject retVal;
-	retVal["value"] = mapping(map, uInt64(blob, offset));
-	retVal["size"] = SIZE_INT*2;
-	return retVal;
+QJsonValue
+Components::map8(uint offset, QJsonObject map) {
+	return mapping(map, uInt64(blob, offset));
 }
 
-QJsonObject
-Components::radioButton (uint offset, QJsonObject map) {
+QJsonValue
+Components::radioButton(uint offset, QJsonObject map, uint* sizeOut) {
 	int key = 0;
 	for (int i = 0; i < map.size(); i++) {
 		bool on = uInt32(blob, offset+SIZE_INT*i)!=0;
@@ -292,10 +391,8 @@ Components::radioButton (uint offset, QJsonObject map) {
 		}
 	}
 	
-	QJsonObject retVal;
-	retVal["value"] = mapping(map, key);
-	retVal["size"] =  SIZE_INT*map.size();
-	return retVal;
+	if(sizeOut) *sizeOut = SIZE_INT*map.size();
+	return mapping(map, key);
 }
 
 QJsonValue
@@ -307,51 +404,51 @@ Components::mapping (QJsonObject map, int key) {
 	return value;
 }
 
-QJsonObject
-Components::codeSection (uint offset, QJsonArray map, bool nt) {
+QJsonValue
+Components::codeSection(uint offset, QJsonArray map, bool nt, uint* sizeOut) {
 	QStringList strings;
 	uint totalSize = 0;
 	for (int i = 0; i < map.size(); i++) {
-		QJsonObject strAndSize = nt ? ntString(offset+totalSize) : sizeString(offset+totalSize);
-		totalSize += (uint)(strAndSize["size"].toDouble());
-		strings.append(strAndSize["value"].toString());
+		uint sizeOutInner;
+		QString str = nt ? ntString(offset+totalSize, &sizeOutInner) : sizeString(offset+totalSize, 0, &sizeOutInner);
+		totalSize += sizeOutInner;
+		strings.append(str);
 	};
 	QJsonObject code;
 	for (int i = 0; i < map.size(); i++) {
 		code[map[i].toArray()[0].toString()] = strings[(uint)(map[i].toArray()[1].toDouble())];
 	}
 	
-	QJsonObject retVal;
-	retVal["value"] = code;
-	retVal["size"] = (double)totalSize;
-	return retVal;
+	if(sizeOut) *sizeOut = totalSize;
+	return code;
 }
 
 
-QJsonObject
-Components::colorList (uint offset) {
+QJsonValue
+Components::colorList(uint offset, uint* sizeOut) {
 	QJsonArray colors;
 	uint num = uInt32(blob, offset);
 	uint size = SIZE_INT+num*SIZE_INT;
-	while(num>0) {
-		offset += SIZE_INT;
-		colors.append(color(offset)["value"]);
-		num--;
+	if(num>1023) {
+		log(QString("Color List - unreasonably large color count (%1).").arg(num), /*error*/true);
+	} else {
+		while(num>0) {
+			offset += SIZE_INT;
+			colors.append(color(offset));
+			num--;
+		}
 	}
-	
-	QJsonObject retVal;
-	retVal["value"] = colors;
-	retVal["size"] = (double)size;
-	return retVal;
+	if(sizeOut) *sizeOut = size;
+	return colors;
 }
 
-QJsonObject
-Components::colorMaps (uint offset) {
+QJsonValue
+Components::colorMaps(uint offset, uint* sizeOut) {
 	uint mapOffset = offset+480;
 	QJsonArray maps;
 	uint headerSize = 60; // 4B enabled, 4B num, 4B id, 48B filestring
 	for (uint i = 0; i < 8; i++) {
-		bool enabled = boolean(offset+headerSize*i, SIZE_INT)["value"].toBool();
+		bool enabled = boolean(offset+headerSize*i, SIZE_INT);
 		uint num = uInt32(blob, offset+headerSize*i+SIZE_INT);
 		QJsonArray map = colorMap(mapOffset, num);
 		// check if it's a disabled default {0: #000000, 255: #ffffff} map, and only save it if not.
@@ -364,10 +461,8 @@ Components::colorMaps (uint offset) {
 			curMap["index"] = (double)i;
 			curMap["enabled"] = enabled;
 			if(ALL_FIELDS) {
-				uint id = uInt32(blob, offset+headerSize*i+SIZE_INT*2); // id of the map - not really needed.
-				QString mapFile = ntString(offset+headerSize*i+SIZE_INT*3)["value"].toString();
-				curMap["id"] = (double)id;
-				curMap["fileName"] = mapFile;
+				curMap["id"] = (double)uInt32(blob, offset+headerSize*i+SIZE_INT*2); // id of the map - not really needed.
+				curMap["fileName"] = ntString(offset+headerSize*i+SIZE_INT*3);
 			}
 			curMap["map"] = map;
 			maps.append(curMap);
@@ -375,10 +470,8 @@ Components::colorMaps (uint offset) {
 		mapOffset += num*SIZE_INT*3;
 	}
 	
-	QJsonObject retVal;
-	retVal["value"] = maps;
-	retVal["size"] = (double)(mapOffset-offset);
-	return retVal;
+	if(sizeOut) *sizeOut = mapOffset-offset;
+	return maps;
 }
 
 QJsonArray
@@ -386,9 +479,8 @@ Components::colorMap (uint offset, uint num) {
 	QJsonArray colorMap;
 	for (uint i = 0; i < num; i++) {
 		uint pos = uInt32(blob, offset);
-		QString col = color(offset+SIZE_INT)["value"].toString();
 		QJsonObject colorPin;
-		colorPin["color"] = col;
+		colorPin["color"] = color(offset+SIZE_INT);
 		colorPin["position"] = (double)pos;
 		colorMap.append(colorPin);
 		offset += SIZE_INT*3; // there's a 4byte id (presumably) following each color.
@@ -396,20 +488,17 @@ Components::colorMap (uint offset, uint num) {
 	return colorMap;
 }
 
-QJsonObject
-Components::color (uint offset) {
+QString
+Components::color(uint offset, uint* sizeOut) {
 	// Colors in AVS are saved as (A)RGB (where A is always 0).
 	// Maybe one should use an alpha channel right away and set
 	// that to 0xff? For now, no 4th byte means full alpha.
-	QString color = QString("%1").arg(uInt32(blob, offset), 6, 16);
-	QJsonObject retVal;
-	retVal["value"] = color.prepend('#');
-	retVal["size"] = SIZE_INT;
-	return retVal;
+	if(sizeOut) *sizeOut = SIZE_INT;
+	return QString("%1").arg(uInt32(blob, offset), 0, 16).rightJustified(6, '0').prepend('#');
 }
 
-QJsonObject
-Components::convoFilter (uint offset, QJsonValue dimensions) {
+QJsonValue
+Components::convoFilter(uint offset, QJsonValue dimensions, uint* sizeOut) {
 	if(!dimensions.isArray() || dimensions.toArray().size()!=2) {
 		log("ConvoFilter: Size must be array with x and y dimensions in dwords.", /*error*/true);
 	}
@@ -417,17 +506,15 @@ Components::convoFilter (uint offset, QJsonValue dimensions) {
 	uint size = dimArr[0].toDouble() * dimArr[1].toDouble();
 	QJsonArray data;
 	for (uint i = 0; i < size; i++, offset+=SIZE_INT) {
-		data.append((double)(int32(offset)["value"].toDouble()));
+		data.append((double)int32(offset));
 	}
 	QJsonObject kernel;
 	kernel["width"] = dimArr[0];
 	kernel["height"] = dimArr[1];
 	kernel["data"] = data;
 	
-	QJsonObject retVal;
-	retVal["value"] = kernel;
-	retVal["size"] = (double)size*SIZE_INT;
-	return retVal;
+	if(sizeOut) *sizeOut = size*SIZE_INT;
+	return kernel;
 }
 
 // 'Text' needs this
@@ -444,25 +531,23 @@ Components::semiColSplit (QString str) {
 	return QJsonValue(retVal);
 }
 
-QJsonObject
-Components::bufferNum (uint offset, uint size) {
+QJsonValue
+Components::bufferNum(uint offset, uint size, uint* sizeOut) {
 	uint code = size==1 ? blob[offset] : uInt32(blob, offset);
-	QJsonObject retVal;
+	if(sizeOut) *sizeOut = size==1 ? 1 : 4;
 	if(code==0) {
-		retVal["value"] = QString("Current");
+		return QString("Current");
 	} else {
-		retVal["value"] = (double)uInt32(blob, offset);
+		return (double)uInt32(blob, offset);
 	}
-	retVal["size"] = (double)size;
-	return retVal;
 }
 
 
 //// Utility functions
 
 
-QJsonObject
-Components::sizeString (uint offset, uint size) {
+QString
+Components::sizeString(uint offset, uint size, uint* sizeOut) {
 	uint add = 0;
 	QString result;
 	if(size==0) {
@@ -476,14 +561,12 @@ Components::sizeString (uint offset, uint size) {
 		result.append(c);
 		c = blob[++i];
 	}
-	QJsonObject retVal;
-	retVal["value"] = result;
-	retVal["size"] = (double)(size+add);
-	return retVal;
+	if(sizeOut) *sizeOut = size+add;
+	return result;
 }
 
-QJsonObject
-Components::ntString (uint offset) {
+QString
+Components::ntString(uint offset, uint* sizeOut) {
 	QString result;
 	uint i = offset;
 	char c = blob[i];
@@ -491,58 +574,46 @@ Components::ntString (uint offset) {
 		result.append(c);
 		c = blob[++i];
 	}
-	QJsonObject retVal;
-	retVal["value"] = result;
-	retVal["size"] = (double)(i-offset+1);
-	return retVal;
+	if(sizeOut) *sizeOut = i-offset+1;
+	return result;
 }
 
-QJsonObject
-Components::boolean (uint offset, uint size) {
-	uint val = size==1?blob[offset]:uInt32(blob, offset);
-	QJsonObject retVal;
-	retVal["value"] = val!=0;
-	retVal["size"] = (double)size;
-	return retVal;
+bool
+Components::boolean (uint offset, uint size, uint* sizeOut) {
+	if(sizeOut) *sizeOut = size==1 ? 1 : SIZE_INT;
+	uint val = size==1 ? blob[offset] : uInt32(blob, offset);
+	return val!=0;
 }
 
-QJsonObject
-Components::int32 (uint offset) {
-	qint32 value = *((qint32*)(blob.constData()+offset));
-	QJsonObject retVal;
-	retVal["value"] = value;
-	retVal["size"] = SIZE_INT;
-	return retVal;
+qint32
+Components::int32 (uint offset, uint* sizeOut) {
+	if(sizeOut) *sizeOut = SIZE_INT;
+	return *((qint32*)(blob.constData()+offset));
 }
 
-QJsonObject
-Components::float32 (uint offset) {
-	float value = *((float*)(blob.constData()+offset));
-	QJsonObject retVal;
-	retVal["value"] = value;
-	retVal["size"] = SIZE_INT;
-	return retVal;
+QJsonValue
+Components::float32 (uint offset, uint* sizeOut) {
+	if(sizeOut) *sizeOut = 4;
+	return *((float*)(blob.constData()+offset));
 }
 
-QJsonObject
-Components::bit (uint offset, QJsonValue pos) {
-	QJsonObject retVal;
+QJsonValue
+Components::bit(uint offset, QJsonValue pos, uint* sizeOut) {
+	if(sizeOut) *sizeOut = 1;
 	if(pos.isArray()) {
 		QJsonArray posArr = pos.toArray();
 		if(posArr.size()!=2) {
 			log("Wrong Bitfield range", /*error*/true);
-			retVal["value"] = -1;
+			return -1;
 		} else {
 			unsigned char pos0 = (unsigned char)posArr[0].toDouble();
 			unsigned char pos1 = (unsigned char)posArr[1].toDouble();
 			char mask = (2<<(pos1-pos0))-1;
-			retVal["value"] = (blob[offset]>>pos0)&mask;
+			return (blob[offset]>>pos0)&mask;
 		}
 	} else {
-		retVal["value"] = (blob[offset]>>((unsigned char)pos.toDouble()))&1;
+		return (blob[offset]>>((unsigned char)pos.toDouble()))&1;
 	}
-	retVal["size"] = 1;
-	return retVal;
 }
 
 // these are static because they are needed from the outside
