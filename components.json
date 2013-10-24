@@ -1,20 +1,20 @@
 ﻿[
-	{"name": "Effect List",
+	{"name": "Effect List", // builtin and r_list.cpp for extended Effect Lists
 		"code": "0xfffffffe", "group": "", "func": "effectList"},
-	{"name": "Simple",
+	{"name": "Simple", // r_simple.cpp
 		"code": "0x00", "group": "Render", "func": "simple"},
-	{"name": "Dot Plane",
+	{"name": "Dot Plane", // r_dotpln.cpp
 		"code": "0x01", "group": "Render", "func": "generic", "fields": [
-			{"rotationSpeed": "int32"},
+			{"rotationSpeed": "int32"}, // -50 to 50
 			{"colorTop": "color"},
 			{"colorHigh": "color"},
 			{"colorMid": "color"},
 			{"colorLow": "color"},
 			{"colorBottom": "color"},
 			{"angle": "int32"},
-			{"null0": 4}
+			{"null0": 4} // [see comment on dot fountan]
 		]},
-	{"name": "Oscilliscope Star",
+	{"name": "Oscilliscope Star", // r_oscstar.cpp
 		"code": "0x02", "group": "Render", "func": "generic", "fields": [
 			{"audioChannel": ["bit", [2,3], "audioChannel"]},
 			{"positionX": ["bit", [4,5], "positionX"]},
@@ -23,80 +23,90 @@
 			{"size": 4},
 			{"rotation": 4}
 		]},
-	{"name": "FadeOut",
+	{"name": "FadeOut", // r_fadeout.cpp
 		"code": "0x03", "group": "Trans", "func": "generic", "fields": [
 			{"speed": 4},
 			{"color": ["color", 4]}
 		]},
-	{"name": "Blitter Feedback",
+	{"name": "Blitter Feedback", // r_blit.cpp
 		"code": "0x04", "group": "Misc", "func": "generic", "fields": [
-			{"zoom": 4},
+			{"zoom": 4}, // [position]: [factor] -> 0x00: 2, 0x20: 1, 0xA0: 0.5, 0x100: ~1/3
 			{"onBeatZoom": 4},
 			{"output": ["map4", {"0": "Replace", "1": "50/50"}]},
 			{"onBeat": ["boolean", 4]},
 			{"bilinear": ["boolean", 4]}
 		]},
-	{"name": "OnBeat Clear",
+	{"name": "OnBeat Clear", // r_nfclr.cpp
 		"code": "0x05", "group": "Render", "func": "generic", "fields": [
 			{"color": "color"},
 			{"output": ["map4", {"0": "Replace", "1": "50/50"}]},
 			{"clearBeats": 4}
 		]},
-	{"name": "Blur",
+	{"name": "Blur", // r_blur.cpp
 		"code": "0x06", "group": "Trans", "func": "generic", "fields": [
 			{"blur": ["map4", {"0": "None", "1": "Medium", "2": "Light", "3": "Heavy"}]},
 			{"round": ["map4", {"0": "Down", "1": "Up"}]}
 		]},
-	{"name": "Bass Spin",
+	{"name": "Bass Spin", // r_bspin.cpp
 		"code": "0x07", "group": "Trans", "func": "generic", "fields": [
 			{"enabledLeft": ["bit", 0, "boolified"]},
 			{"enabledRight": ["bit", 1, "boolified"]},
-			{"null0": 3},
+			{"null0": 3}, // fill up bitfield
 			{"colorLeft": "color"},
 			{"colorRight": "color"},
 			{"mode": ["map4", {"0": "Lines", "1": "Triangles"}]}
 		]},
-	{"name": "Moving Particle",
+	{"name": "Moving Particle", // r_parts.cpp
 		"code": "0x08", "group": "Render", "func": "generic", "fields": [
 			{"enabled": ["bit", 0, "boolified"]},
 			{"onBeatSizeChange": ["bit", 1, "boolified"]},
-			{"null0": 3},
+			{"null0": 3}, // fill up bitfield
 			{"color": "color"},
-			{"range": 4},
+			{"range": 4}, // 1-20: min(h/2,w*(3/8))*range/32.0
 			{"size": 4},
 			{"onBeatSize": 4},
 			{"output": ["map4", {"0": "Replace", "1": "Additive", "2": "50/50", "3": "Default"}]}
 		]},
-	
+    {"name": "Roto Blitter", // r_svp.cpp
+        "code": "0x09", "group": "Trans", "func": "generic", "fields": [
+            {"zoom": 4},
+            {"rotate": 4},
+            {"output": ["map4", {"0": "Replace", "1": "50/50"}]},
+            {"onBeatReverse": ["boolean", 4]},
+            {"reversalSpeed": 4}, // inverted - 0: fastest, 8: slowest // inverted - 0: fastest, 8: slowest
+            {"onBeatZoom": 4},
+            {"onBeat": ["boolean", 4]},
+            {"bilinear": ["boolean", 4]}
+        ]},
 	{"name": "SVP",
 		"code": "0x0A", "group": "Render", "func": "generic", "fields": [
 			{"library": ["sizeString", 260]}
 		]},
-	{"name": "Colorfade",
+	{"name": "Colorfade", // r_colorfade.cpp
 		"code": "0x0B", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["bit", 0, "boolified"]},
-			{"onBeat": ["bit", 2, "boolified"]},
+			{"onBeat": ["bit", 2, "boolified"]}, // i changed the order a bit here
 			{"onBeatRandom": ["bit", 1, "boolified"]},
-			{"null0": 3},
-			{"fader1": "Int32"},
-			{"fader2": "Int32"},
-			{"fader3": "Int32"},
-			{"beatFader1": "Int32"},
-			{"beatFader2": "Int32"},
-			{"beatFader3": "Int32"}
+			{"null0": 3}, // fill up bitfield
+			{"fader1": "int32"}, // all faders go from -32 to 32
+			{"fader2": "int32"},
+			{"fader3": "int32"},
+			{"beatFader1": "int32"},
+			{"beatFader2": "int32"},
+			{"beatFader3": "int32"}
 		]},
-	{"name": "Color Clip",
+	{"name": "Color Clip", // r_contrast.cpp
 		"code": "0x0C", "group": "Trans", "func": "generic", "fields": [
 			{"mode": ["map4", {"0": "Off", "1": "Below", "2": "Above", "3": "Near"}]},
 			{"colorFrom": "color"},
 			{"colorTo": "color"},
 			{"colorDistance": 4}
 		]},
-	{"name": "Rotating Stars",
+	{"name": "Rotating Stars", // r_rotstar.cpp
 		"code": "0x0D", "group": "Render", "func": "generic", "fields": [
 			{"colors": "colorList"}
 		]},
-	{"name": "Ring",
+	{"name": "Ring", // r_oscring.cpp
 		"code": "0x0E", "group": "Render", "func": "generic", "fields": [
 			{"audioChannel": ["bit", [2,3], "audioChannel"]},
 			{"positionX": ["bit", [4,5], "positionX"]},
@@ -105,59 +115,59 @@
 			{"size": 4},
 			{"audioSource": ["uInt32", 4, "audioSource"]}
 		]},
-	{"name": "Movement",
+	{"name": "Movement", // r_trans.cpp
 		"code": "0x0F", "group": "Trans", "func": "movement"},
-	{"name": "Scatter",
+	{"name": "Scatter", // r_scat.cpp
 		"code": "0x10", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]}
 		]},
-	{"name": "Dot Grid",
+	{"name": "Dot Grid", // r_dotgrid.cpp
 		"code": "0x11", "group": "Render", "func": "generic", "fields": [
 			{"colors": "colorList"},
 			{"spacing": 4},
-			{"speedX": "int32"},
+			{"speedX": "int32"}, // -512 to 544
 			{"speedY": "int32"},
 			{"output": ["map4", {"0": "Replace", "1": "Additive", "2": "50/50", "3": "Default"}]}
 		]},
-	{"name": "Buffer Save",
+	{"name": "Buffer Save", // r_stack.cpp
 		"code": "0x12", "group": "Misc", "func": "generic", "fields": [
 			{"mode": ["buffermode", 4]},
 			{"buffer": ["bufferNum", 4]},
 			{"blend": ["blendmodeBuffer", 4]},
 			{"adjustBlend": 4}
 		]},
-	{"name": "Dot Fountain",
+	{"name": "Dot Fountain", // r_dotfnt.cpp
 		"code": "0x13", "group": "Render", "func": "generic", "fields": [
-			{"rotationSpeed": "int32"},
+			{"rotationSpeed": "int32"}, // -50 to 50
 			{"colorTop": "color"},
 			{"colorHigh": "color"},
 			{"colorMid": "color"},
 			{"colorLow": "color"},
 			{"colorBottom": "color"},
 			{"angle": "int32"},
-			{"null0": 4}
+			{"null0": 4} // most likely current rotation, has some huge value, has no ui, is basically arbitrary depending on time of save, not converted
 		]},
-	{"name": "Water",
+	{"name": "Water", // r_water.cpp
 		"code": "0x14", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]}
 		]},
-	{"name": "Comment",
+	{"name": "Comment", // r_comment.cpp
 		"code": "0x15", "group": "Misc", "func": "generic", "fields": [
 			{"text": "sizeString"}
 		]},
-	{"name": "Brightness",
+	{"name": "Brightness", // r_bright.cpp
 		"code": "0x16", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"output": ["map8", {"0": "Replace", "1": "Additive", "0x100000000": "50/50"}]},
-			{"red": "int32"},
-			{"green": "int32"},
-			{"blue": "int32"},
+			{"red": "int32"},   // \
+			{"green": "int32"}, //  > -4096 to 4096
+			{"blue": "int32"},  // /
 			{"separate": ["boolean", 4]},
 			{"excludeColor": "color"},
 			{"exclude": ["boolean", 4]},
-			{"distance": 4}
+			{"distance": 4} // 0 to 255
 		]},
-	{"name": "Interleave",
+	{"name": "Interleave", // r_interleave.cpp
 		"code": "0x17", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"x": 4},
@@ -169,33 +179,33 @@
 			{"y2": 4},
 			{"beatDuration": 4}
 		]},
-	{"name": "Grain",
+	{"name": "Grain", // r_grain.cpp
 		"code": "0x18", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"output": ["map8", {"0": "Replace", "1": "Additive", "0x100000000": "50/50"}]},
-			{"amount": 4},
+			{"amount": 4}, // 0-100
 			{"static": ["boolean", 4]}
 		]},
-	{"name": "Clear Screen",
+	{"name": "Clear Screen", // r_clear.cpp
 		"code": "0x19", "group": "Render", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"color": ["color", 4]},
 			{"output": ["map8", {"0": "Replace", "1": "Additive", "0x100000000": "50/50", "2": "Default"}]},
 			{"onlyFirst": ["boolean", 4]}
 		]},
-	{"name": "Mirror",
+	{"name": "Mirror", // r_mirror.cpp
 		"code": "0x1A", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"topToBottom": ["bit", 0, "boolified"]},
 			{"bottomToTop": ["bit", 1, "boolified"]},
 			{"leftToRight": ["bit", 2, "boolified"]},
 			{"rightToLeft": ["bit", 3, "boolified"]},
-			{"null0": 3},
+			{"null0": 3}, // fill up bitfield space
 			{"onBeat": ["boolean", 4]},
 			{"smooth": ["boolean", 4]},
 			{"speed": 4}
 		]},
-	{"name": "Starfield",
+	{"name": "Starfield", // r_stars.cpp
 		"code": "0x1B", "group": "Render", "func": "generic", "fields": [
 			{"enabled": 4},
 			{"color": "color"},
@@ -206,7 +216,7 @@
 			{"spdBeat": ["float32", 4]},
 			{"durFrames": 4}
 		]},
-	{"name": "Text",
+	{"name": "Text", // r_text.cpp
 		"code": "0x1C", "group": "Render", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"color": ["color", 4]},
@@ -218,16 +228,24 @@
 			{"horizontalAlign": ["map4", {"0": "Left", "1": "Center", "2": "Right"}]},
 			{"onBeatSpeed": 4},
 			{"normSpeed": 4},
-			{"null0": 60},
-			{"null1": 16},
-			{"weight": ["map4", {"0": "Dontcare", "100": "Thin", "200": "Extralight", "200": "Ultralight", "300": "Light", "400": "Normal", "400": "Regular", "500": "Medium", "600": "Semibold", "600": "Demibold", "700": "Bold", "800": "Extrabold", "800": "Ultrabold", "900": "Heavy", "900": "Black"}]},
-			{"italic": ["boolean", 1]},
-			{"underline": ["boolean", 1]},
-			{"strikeOut": ["boolean", 1]},
-			{"charSet": 1},
-			{"null2": 4},
-			{"fontName": ["sizeString", 32]},
-			{"text": ["sizeString", 0, "semiColSplit"]},
+			{"null0": 60}, // Win CHOOSEFONT structure, little relevance afaics
+			// Win LOGFONT structure, 60bytes, this is more interesting:
+				{"null1": 16}, // LONG  lfHeight;
+								// LONG  lfWidth;
+								// LONG  lfEscapement;
+								// LONG  lfOrientation;
+				// LONG  lfWeight;
+					{"weight": ["map4", {"0": "Dontcare", "100": "Thin", "200": "Extralight", "200": "Ultralight", "300": "Light", "400": "Normal", "400": "Regular", "500": "Medium", "600": "Semibold", "600": "Demibold", "700": "Bold", "800": "Extrabold", "800": "Ultrabold", "900": "Heavy", "900": "Black"}]},
+				{"italic": ["boolean", 1]}, // BYTE  lfItalic;
+				{"underline": ["boolean", 1]}, // BYTE  lfUnderline;
+				{"strikeOut": ["boolean", 1]}, // BYTE  lfStrikeOut;
+				{"charSet": 1}, // BYTE  lfCharSet;
+				{"null2": 4}, // BYTE  lfOutPrecision;
+								// BYTE  lfClipPrecision;
+								// BYTE  lfQuality;
+								// BYTE  lfPitchAndFamily;
+				{"fontName": ["sizeString", 32]}, // TCHAR lfFaceName[LF_FACESIZE];
+			{"text": ["sizeString", 0, "semiColSplit"]}, // sizeString(0) == sizeString(), and the 0 is just padding for the third arg
 			{"outline": ["boolean", 4]},
 			{"outlineColor": "color"},
 			{"shiftX": 4},
@@ -236,13 +254,13 @@
 			{"randomWord": ["boolean", 4]},
 			{"shadow": ["boolean", 4]}
 		]},
-	{"name": "Bump",
+	{"name": "Bump", // r_bump.cpp
 		"code": "0x1D", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"onBeat": ["boolean", 4]},
-			{"duration": 4},
-			{"depth": 4},
-			{"onBeatDepth": 4},
+			{"duration": 4}, // 0-100
+			{"depth": 4}, // 0-100
+			{"onBeatDepth": 4}, // 0-100
 			{"output": ["map8", {"0": "Replace", "1": "Additive", "0x100000000": "50/50"}]},
 			{"code": "codeFBI"},
 			{"showDot": ["boolean", 4]},
@@ -250,7 +268,7 @@
 			{"null0": 4},
 			{"depthBuffer": ["bufferNum", 4]}
 		]},
-	{"name": "Mosaic",
+	{"name": "Mosaic", // r_mosaic.cpp
 		"code": "0x1E", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"size": 4},
@@ -259,7 +277,7 @@
 			{"onbeat": ["boolean", 4]},
 			{"durFrames": 4}
 		]},
-	{"name": "Water Bump",
+	{"name": "Water Bump", // r_waterbump.cpp
 		"code": "0x1F", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"density": 4},
@@ -270,55 +288,55 @@
 			{"dropRadius": 4},
 			{"method": 4}
 		]},
-	{"name": "AVI",
+	{"name": "AVI", // r_avi.cpp
 		"code": "0x20", "group": "Trans", "func": "avi"},
-	{"name": "Custom BPM",
+	{"name": "Custom BPM", // r_bpm.cpp
 		"code": "0x21", "group": "Misc", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"mode": ["radioButton", {"0": "Arbitrary", "1": "Skip", "2": "Reverse"}]},
 			{"arbitraryValue": 4},
 			{"skipValue": 4},
-			{"skipFirstBeats": 4}
+			{"skipFirstBeats": 4} // setting this to n>0 also prevents arbitrary mode from running on load of preset until n beats have passed.
 		]},
-	{"name": "Picture",
+	{"name": "Picture", // r_picture.cpp
 		"code": "0x22", "group": "Render", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"output": ["map8", {"0": "Replace", "1": "Additive", "0x100000000": "50/50"}]},
 			{"adapt": 4},
-			{"onBeatPersist": 4},
+			{"onBeatPersist": 4}, // 0 to 32
 			{"file": "ntString"},
 			{"ratio": 4},
 			{"aspectRatioAxis": ["map4", {"0": "X", "1": "Y"}]}
 		]},
-	{"name": "Dynamic Distance Modifier",
+	{"name": "Dynamic Distance Modifier", // r_ddm.cpp
 		"code": "0x23", "group": "Trans", "func": "generic", "fields": [
 			{"null0": 1},
 			{"code": "codePFBI"},
 			{"output": ["map4", {"0": "Replace", "1": "50/50"}]},
 			{"bilinear": ["boolean", 4]}
 		]},
-	{"name": "Super Scope",
+	{"name": "Super Scope", // r_ssc.cpp
 		"code": "0x24", "group": "Render", "func": "generic", "fields": [
-			{"version": ["boolean", 1]},
+			{"version": ["boolean", 1]}, // 0: v0.1, 1: v0.2
 			{"code": "codePFBI"},
 			{"audioChannel": ["bit", [0,1], "audioChannel"]},
 			{"audioSource": ["bit", 2, "audioSource"]},
-			{"null0": 3},
+			{"null0": 3}, // padding, bitfield before is actually 32 bit
 			{"colors": "colorList"},
 			{"lineType": ["drawMode", 4]}
 		]},
-	{"name": "Invert",
+	{"name": "Invert", // r_invert.cpp
 		"code": "0x25", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]}
 		]},
-	{"name": "Unique Tone",
+	{"name": "Unique Tone", // r_onetone.cpp
 		"code": "0x26", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"color": "color"},
 			{"output": ["map8", {"0": "Replace", "1": "Additive", "0x100000000": "50/50"}]},
 			{"invert": ["boolean", 4]}
 		]},
-	{"name": "Timescope",
+	{"name": "Timescope", // r_timescope.cpp
 		"code": "0x27", "group": "Render", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"color": "color"},
@@ -326,39 +344,39 @@
 			{"audioChannel": ["uInt32", 4, "audioChannel"]},
 			{"bands": 4}
 		]},
-	{"name": "Set Render Mode",
+	{"name": "Set Render Mode", // r_linemode.cpp
 		"code": "0x28", "group": "Misc", "func": "generic", "fields": [
 			{"blend": ["blendmodeRender", 1]},
 			{"adjustBlend": 1},
 			{"lineSize": 1},
 			{"enabled": ["bit", 7, "boolified"]}
 		]},
-	{"name": "Interference",
+	{"name": "Interference", // r_interf.cpp
 		"code": "0x29", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"numberOfLayers": 4},
-			{"null0": 4},
-			{"distance": 4},
-			{"alpha": 4},
-			{"rotation": "int32"},
+			{"null0": 4}, // current rotation, is virtually arbitrary - not converted
+			{"distance": 4}, // 1 to 64
+			{"alpha": 4}, // 1 to 255
+			{"rotation": "int32"}, // 32 to -32 (ui has inverted range)
 			{"output": ["map8", {"0": "Replace", "1": "Additive", "0x100000000": "50/50"}]},
 			{"onBeatDistance": 4},
 			{"onBeatAlpha": 4},
 			{"onBeatRotation": 4},
 			{"separateRGB": ["boolean", 4]},
 			{"onBeat": ["boolean", 4]},
-			{"speed": "float32"}
+			{"speed": "float32"} // 0.01 to 1.28
 		]},
-	{"name": "Dynamic Shift",
+	{"name": "Dynamic Shift", // r_sPhift.cpp
 		"code": "0x2A", "group": "Trans", "func": "generic", "fields": [
-			{"version": ["boolean", 1]},
+			{"version": ["boolean", 1]}, // 0: v0.1, v1: 0.2
 			{"code": "codeIFB"},
 			{"output": ["map4", {"0": "Replace", "1": "50/50"}]},
 			{"bilinear": ["boolean", 4]}
 		]},
-	{"name": "Dynamic Movement",
+	{"name": "Dynamic Movement", // r_dmove.cpp
 		"code": "0x2B", "group": "Trans", "func": "generic", "fields": [
-			{"version": ["boolean", 1]},
+			{"version": ["boolean", 1]}, // 0: v0.1, v1: 0.2
 			{"code": "codePFBI"},
 			{"bilinear": ["boolean", 4]},
 			{"coordinates": ["coordinates", 4]},
@@ -369,11 +387,11 @@
 			{"buffer": ["bufferNum", 4]},
 			{"alphaOnly": ["boolean", 4]}
 		]},
-	{"name": "Fast Brightness",
+	{"name": "Fast Brightness", // r_fastbright.cpp
 		"code": "0x2C", "group": "Trans", "func": "generic", "fields": [
 			{"factor": ["map4", {"0": 2, "1": 0.5, "2": 1}]}
 		]},
-	{"name": "Color Modifier",
+	{"name": "Color Modifier", // r_dcolormod.cpp
 		"code": "0x2D", "group": "Trans", "func": "generic", "fields": [
 			{"recomputeEveryFrame": ["boolean", 1]},
 			{"code": "codePFBI"}
@@ -409,7 +427,7 @@
 			{"mapCycling": ["cyclemodeColorMap", 4]},
 			{"null0": 2},
 			{"dontSkipFastBeats": ["boolean", 1]},
-			{"cycleSpeed": 1},
+			{"cycleSpeed": 1}, // 1 to 64
 			{"maps": "colorMaps"}
 		]},
 	{"name": "Framerate Limiter",
@@ -424,8 +442,8 @@
 			["0x48", "0x6F", "0x6C", "0x64", "0x65", "0x6E", "0x30", "0x33", "0x3A", "0x20", "0x43", "0x6F", "0x6E", "0x76", "0x6F", "0x6C", "0x75", "0x74", "0x69", "0x6F", "0x6E", "0x20", "0x46", "0x69", "0x6C", "0x74", "0x65", "0x72", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Misc", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
-			{"wrap": ["boolean", 4]},
-			{"absolute": ["boolean", 4]},
+			{"wrap": ["boolean", 4]}, // note that wrap and absolute are mutually exclusive.
+			{"absolute": ["boolean", 4]}, // they can however both be false/zero
 			{"2-pass": ["boolean", 4]},
 			{"kernel": ["convoFilter", [7,7]]},
 			{"bias": "int32"},
@@ -437,11 +455,11 @@
 		"group": "Misc", "func": "generic", "fields": [
 			{"code": "codeIFBPnt"}
 		]},
-	{"name": "Channel Shift",
+	{"name": "Channel Shift", // AVS's (Unconed's) channel shift is buggy in that RGB cannot be selected. but you can turn on 'onBeatRandom' and save in a lucky moment.
 		"code":
 			["0x43", "0x68", "0x61", "0x6E", "0x6E", "0x65", "0x6C", "0x20", "0x53", "0x68", "0x69", "0x66", "0x74", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Misc", "func": "generic", "fields": [
-			{"mode": ["map4", {"1144": "RGB", "1020": "RBG", "1019": "BRG", "1021": "BGR", "1018": "GBR", "1022": "GRB"}]},
+			{"mode": ["map4", {"1144": "RGB", "1020": "RBG", "1019": "BRG", "1021": "BGR", "1018": "GBR", "1022": "GRB"}]}, // strange... would make sense as '1024-mode' but something goes awry at 'RGB'.
 			{"onBeatRandom": ["boolean", 4]}
 		]},
 	{"name": "Normalize",
@@ -458,20 +476,20 @@
 			{"useBeats": ["boolean", 4]},
 			{"delay": 4}
 		]},
-	{"name": "Multiplier",
+	{"name": "Multiplier", // r_multiplier.cpp
 		"code":
 			["0x4D", "0x75", "0x6C", "0x74", "0x69", "0x70", "0x6C", "0x69", "0x65", "0x72", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Trans", "func": "generic", "fields": [
 			{"multiply": ["map4", {"0": "Infinite Root", "1": 8, "2": 4, "3": 2, "4": 0.5, "5": 0.25, "6": 0.125, "7": "Infinite Square"}]}
 		]},
-	{"name": "Color Reduction",
+	{"name": "Color Reduction", // r_colorreduction.cpp
 		"code":
 			["0x43", "0x6F", "0x6C", "0x6F", "0x72", "0x20", "0x52", "0x65", "0x64", "0x75", "0x63", "0x74", "0x69", "0x6F", "0x6E", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Trans", "func": "generic", "fields": [
-			{"null0": 260},
+			{"null0": 260}, // MAX_PATH - space for a file path, unused
 			{"colors": ["map4", {"1": 2, "2": 4, "3": 8, "4": 16, "5": 32, "6": 64, "7": 128, "8": 256}]}
 		]},
-	{"name": "Multi Delay",
+	{"name": "Multi Delay", // r_multidelay.cpp
 		"code":
 			["0x48", "0x6F", "0x6C", "0x64", "0x65", "0x6E", "0x30", "0x35", "0x3A", "0x20", "0x4D", "0x75", "0x6C", "0x74", "0x69", "0x20", "0x44", "0x65", "0x6C", "0x61", "0x79", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Trans", "func": "generic", "fields": [
@@ -508,7 +526,7 @@
 			{"color": "color"},
 			{"size": 4}
 		]},
-	{"name": "AVI Player",
+	{"name": "AVI Player", // Goebish avi player - incomplete! Many many options, supposedly very unstable APE (i.e. no one used this) - until now to lazy to implement
 		"code":
 			["0x56", "0x46", "0x58", "0x20", "0x41", "0x56", "0x49", "0x20", "0x50", "0x4C", "0x41", "0x59", "0x45", "0x52", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Misc", "func": "generic", "fields": [
@@ -536,7 +554,7 @@
 		"code":
 			["0x47", "0x65", "0x69", "0x73", "0x73", "0x46", "0x6C", "0x75", "0x69", "0x64", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Misc", "func": "generic", "fields": [
-			{"null0": 4}
+			{"null0": 4} // Fluid saves its parameter globally somewhere, not in the preset file - great... :/
 		]},
 	{"name": "Picture II",
 		"code":
@@ -547,7 +565,7 @@
 			{"onBeatOutput": ["blendmodePicture2", 4]},
 			{"bilinear": ["boolean", 4]},
 			{"onBeatBilinear": ["boolean", 4]},
-			{"adjustBlend": 4},
-			{"onBeatAdjustBlend": 4}
+			{"adjustBlend": 4}, // 0 to 255
+			{"onBeatAdjustBlend": 4} // 0 to 255
 		]}
 ]

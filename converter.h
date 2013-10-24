@@ -42,6 +42,7 @@ private:
 	QJsonValue decodePresetHeader(QByteArray blob);
 	QJsonArray decodeComponents(QByteArray blob, uint offset);
 	int getComponentIndex(uint code, QByteArray blob, uint offset);
+	QByteArray clearComments(QByteArray json);
 };
 
 #endif // CONVERTER_H

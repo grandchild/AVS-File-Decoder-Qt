@@ -26,12 +26,14 @@ void
 Converter::loadConfig() {
     QJsonParseError parseError;
     
+	// components.json
     QFile componentsFile(QDir::currentPath()+"/components.json");
 	if(componentsFile.exists()) {
 		componentsFile.open(QFile::ReadOnly);
 		QByteArray componentsJSON = componentsFile.readAll();
 		componentsFile.close();
 		
+		componentsJSON = clearComments(componentsJSON);
 		components = QJsonDocument::fromJson(componentsJSON, &parseError).array();
 		if(parseError.error != QJsonParseError::NoError) {
 			window->log(QString(parseError.errorString()+" at offset %1 in '"+componentsFile.fileName()+"'").arg(parseError.offset), /*error*/true);
@@ -51,12 +53,14 @@ Converter::loadConfig() {
 		window->log("'"+componentsFile.fileName()+"' does not exist.", /*error*/true);
     }
 	
-    QFile tablesFile("tables.json");
+	// tables.json
+	QFile tablesFile("tables.json");
 	if(tablesFile.exists()) {
 		tablesFile.open(QFile::ReadOnly);
 		QByteArray tablesJSON = tablesFile.readAll();
 		tablesFile.close();
 		
+		tablesJSON = clearComments(tablesJSON);
 		tables = QJsonDocument::fromJson(tablesJSON, &parseError).object();
 		if(parseError.error != QJsonParseError::NoError) {
 			window->log(QString(parseError.errorString()+" at offset %1 in '"+tablesFile.fileName()+"'").arg(parseError.offset), /*error*/true);
@@ -112,7 +116,7 @@ Converter::logComponents() {
 QString
 Converter::convertAll() {
 	if(error) return QString();
-	window->setProgressMax(fileList.length());
+	window->setProgressMax(fileList.length()-1); // why it's length()-1 i have no idea...
 	foreach(QFileInfo file, fileList) {
 		if(stop || error) break;
 		QString json = convertSingle(file);
@@ -191,6 +195,33 @@ Converter::decodePresetHeader(QByteArray blob) {
 		//throw new ConvertException("Invalid preset header.");
 	}
 	return QJsonValue(blob[AVS_HEADER_LENGTH-1]==(char)1); // "Clear Every Frame"
+}
+
+QByteArray
+Converter::clearComments(QByteArray json) {
+	char* jsonOut = new char[json.size()];
+	bool skip = false;
+	bool string = false;
+	char* c = json.data();
+	uint i=0;
+	do {
+		if(*c=='\"') {
+			string = !string;
+		}
+		if(!string && *c=='/' && *(c+1)=='/') {
+			skip = true;
+		}
+		if(*c=='\x0A' || *c=='\x0D') {
+			skip = false;
+		}
+		jsonOut[i] = *(c++);
+		if(!skip) {
+			++i;
+		}
+	} while(*c!='\0');
+	QByteArray jsonOutBA(jsonOut, i);
+	free(jsonOut);
+	return jsonOutBA;
 }
 
 void
