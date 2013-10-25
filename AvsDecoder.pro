@@ -14,15 +14,20 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     converter.cpp \
-    components.cpp
+    components.cpp \
+    settingsdialog.cpp \
+    settings.cpp
 
 HEADERS  += mainwindow.h \
     converter.h \
     convertexception.h \
     defines.h \
-    components.h
+    components.h \
+    settingsdialog.h \
+    settings.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    settingsdialog.ui
 
 INCLUDEPATH += $$PWD/include
 

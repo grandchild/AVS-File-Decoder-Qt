@@ -1,13 +1,16 @@
+#include <QFileDialog>
+#include <QString>
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "converter.h"
-#include <QFileDialog>
-#include <QString>
+#include "settingsdialog.h"
 
 MainWindow::MainWindow(QWidget *parent) :
 	QWidget(parent),
 	ui(new Ui::MainWindow),
-	noneText("[none]")
+	noneText("[none]"),
+	settings("avsdecoder.ini")
 {
 	ui->setupUi(this);
 	ui->cancelButton->setDisabled(true);
@@ -59,7 +62,7 @@ MainWindow::setSampleName(QString name) {
 
 bool
 MainWindow::indent() {
-	return ui->indentCheckBox->isChecked();
+	return settings.getIndent();
 }
 
 // Slots
@@ -78,8 +81,7 @@ MainWindow::on_convertButton_clicked()
 					this);
 	}
 	converter->convertAll();
-	free(converter);
-	converter = NULL;
+	delete converter;
 	ui->cancelButton->setDisabled(true);
 	ui->convertButton->setDisabled(false);
 }
@@ -151,8 +153,7 @@ MainWindow::updatePath(QString path, QLineEdit* lineEdit) {
 		lineEdit->setStyleSheet("");
 	}
 	if(converter!=NULL) {
-		free(converter);
-		converter = NULL;
+		delete converter;
 		log("Converter reset.");
 	}
 	resetProgress();
@@ -170,4 +171,11 @@ MainWindow::on_samplePresetSelectBox_currentIndexChanged(int index)
 		}
 		converter->convert(index-1);
 	}
+}
+
+void
+MainWindow::on_pushButton_clicked()
+{
+	SettingsDialog settingsDialog(this, &settings);
+	settingsDialog.exec();
 }

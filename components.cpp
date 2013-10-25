@@ -56,12 +56,12 @@ Components::getComponentIndex(uint code) {
 		QJsonValue currentCode = components->at(i).toObject()["code"];
 		if(currentCode.isString()) {
 			if(code == (uint)(currentCode.toString().toUInt(0,0))) {
-				log("Found component: "+components->at(i).toObject()["name"].toString()+" ("+QString("%1").arg(code)+")");
+				if(VERBOSE>=1) log("Found component: "+components->at(i).toObject()["name"].toString()+" ("+QString("%1").arg(code)+")");
 				return i;
 			}
 		} else if(currentCode.isArray()) {
 			if(blob.mid(offset+SIZE_INT, 32).startsWith(componentDllCodes->value(i))) {
-				log("Found component: "+components->at(i).toObject()["name"].toString());
+				if(VERBOSE>=1) log("Found component: "+components->at(i).toObject()["name"].toString());
 				return i;
 			}
 		}
@@ -99,12 +99,12 @@ Components::decodeGeneric(uint offset, uint end, QString name, QString group, QJ
 	bool lastWasABitField = false;
 	for (int i = 0; i < fields.size(); ++i) {
 		if(offset >= end) {
-			log("Warning: Component went over its size while scanning.");
+			log("Warning: Component went over its size while scanning.", /*error*/true);
 			break;
 		}
 		QString k = fields[i].toObject().keys()[0];
 		QJsonValue f = fields[i].toObject()[k];
-		if(VERBOSE) log("Field: "+k);
+		if(VERBOSE>=2) log("Field: "+k);
 		if(QRegExp("^null[_0-9]*$").exactMatch(k)) {
 			offset += (uint)f.toDouble();
 			// '"null_": "0"' resets bitfield continuity to allow several consecutive bitfields (hasn't been necessary yet thogh)
@@ -147,12 +147,12 @@ Components::decodeGeneric(uint offset, uint end, QString name, QString group, QJ
 			if(fArray.size()>2) { // further processing if wanted
 				value = call2nd(fArray[2].toString(), value);
 			}
-			if(VERBOSE) log(QString("Size: %1").arg(size));
+			if(VERBOSE>=2) log(QString("Size: %1").arg(size));
 		}
 		
 		// save value or function result of value in field
 		comp[k] = value;
-		if(VERBOSE) log("k: "+k+", val: "+value.toString()+", offset: "+QString("%1").arg(offset));
+		if(VERBOSE>=2) log("k: "+k+", val: "+value.toString()+", offset: "+QString("%1").arg(offset));
 		offset += size;
 	}
 	return comp;
@@ -303,7 +303,7 @@ Components::call(QString function, uint offset, uint* sizeOut, QJsonValue other)
 	if(QRegExp("code[IFBP]{3,4}(nt)?").exactMatch(function)) {
 		// (Point,) Frame, Beat, Init code fields, in various arrangements - read and reorder to I,F,B(,P).
 		// look up the sort map from 'tables.json', lines are 'need'-sorted with 'is'-index.
-		if(VERBOSE) log("Table code fields function '"+function+"'.");
+		if(VERBOSE>=2) log("Table code fields function '"+function+"'.");
 		return codeSection(offset, tables->value(function).toArray(), function.endsWith("nt"), sizeOut);
 	} else if(tables->contains(function)) { // one of the generic table->value lookups
 		QString code = QString("%1").arg((uint)(other.toDouble()<1.001 ? blob[offset] : uInt32(blob, offset)));
@@ -348,7 +348,6 @@ Components::call(QString function, uint offset, uint* sizeOut, QJsonValue other)
 	} else {
 		log("Unknown function '"+function+"'.", /*error*/true);
 	}
-	if(VERBOSE) qDebug() << "Function: '" << function << "', result: '" << value << "'.";
 	return value;
 }
 

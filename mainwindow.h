@@ -5,6 +5,8 @@
 #include <QDebug>
 #include <QLineEdit>
 
+#include "settings.h"
+
 namespace Ui {
 class MainWindow;
 }
@@ -37,11 +39,14 @@ private slots:
 	void on_outputPathEdit_textChanged(const QString &outPath);
 	void on_samplePresetSelectBox_currentIndexChanged(int index);
 	
+	void on_pushButton_clicked();
+	
 private:
 	Ui::MainWindow* ui;
 	Converter* converter;
 	double progressIncr;
 	QString noneText;
+	Settings settings;
 	
 	void selectDirPath(QLineEdit* pathEdit);
 	void updatePath(QString path, QLineEdit* lineEdit);
