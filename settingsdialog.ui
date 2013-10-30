@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>255</width>
+    <width>365</width>
     <height>183</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
@@ -80,17 +86,13 @@
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="minimize">
-          <property name="toolTip">
-           <string>Remove various empty or standard fields from output to reduce file size.</string>
-          </property>
-          <property name="text">
-           <string>Minimize</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QCheckBox" name="compactKernels">
+          <property name="baseSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
           <property name="font">
            <font>
             <weight>50</weight>
@@ -102,6 +104,22 @@
           </property>
           <property name="text">
            <string>Compact Kernels</string>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>24</width>
+            <height>24</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="minimize">
+          <property name="toolTip">
+           <string>Remove various empty or standard fields from output to reduce file size.</string>
+          </property>
+          <property name="text">
+           <string>Minimize</string>
           </property>
          </widget>
         </item>

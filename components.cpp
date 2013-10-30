@@ -16,6 +16,7 @@ Components::Components(QJsonArray* components,
 	blob(blob),
 	offset(offset),
 	window(window),
+	indexCounter(0),
 	error_(false),
 	errorCount_(0)
 {}
@@ -92,9 +93,9 @@ Components::decodeComponent(uint end, QString name, QString group, QString funct
 QJsonObject
 Components::decodeGeneric(uint offset, uint end, QString name, QString group, QJsonArray fields) {
 	QJsonObject comp;
-	comp["type"] = name.remove(' ');
+	comp[ordKey("type")] = name.remove(' ');
 	if(ALL_FIELDS) {
-		comp["group"] = group;
+		comp[ordKey("group")] = group;
 	}
 	bool lastWasABitField = false;
 	for (int i = 0; i < fields.size(); ++i) {
@@ -151,7 +152,7 @@ Components::decodeGeneric(uint offset, uint end, QString name, QString group, QJ
 		}
 		
 		// save value or function result of value in field
-		comp[k] = value;
+		comp[ordKey(k)] = value;
 		if(VERBOSE>=2) log("k: "+k+", val: "+value.toString()+", offset: "+QString("%1").arg(offset));
 		offset += size;
 	}
@@ -163,20 +164,20 @@ Components::decodeEffectList(uint offset) {
 	uint size = uInt32(blob, offset-SIZE_INT);
 	QJsonObject comp;
 	
-	comp["type"] = QString("EffectList");
-	comp["enabled"] = bit(offset, 1)!=1;
-	comp["clearFrame"] = bit(offset, 0)==1;
-	comp["input"] = call("blendmodeIn", offset+2, NULL, 1);
-	comp["output"] = call("blendmodeOut", offset+3, NULL, 1);
+	comp[ordKey("type")] = QString("EffectList");
+	comp[ordKey("enabled")] = bit(offset, 1)!=1;
+	comp[ordKey("clearFrame")] = bit(offset, 0)==1;
+	comp[ordKey("input")] = call("blendmodeIn", offset+2, NULL, 1);
+	comp[ordKey("output")] = call("blendmodeOut", offset+3, NULL, 1);
 	//ignore constant el config size of 36 bytes (9 x int32)
-	comp["inAdjustBlend"] = (double)uInt32(blob, offset+5);
-	comp["outAdjustBlend"] = (double)uInt32(blob, offset+9);
-	comp["inBuffer"] = (double)uInt32(blob, offset+13);
-	comp["outBuffer"] = (double)uInt32(blob, offset+17);
-	comp["inBufferInvert"] = uInt32(blob, offset+21)==1;
-	comp["outBufferInvert"] = uInt32(blob, offset+25)==1;
-	comp["enableOnBeat"] = uInt32(blob, offset+29)==1;
-	comp["onBeatFrames"] = (double)uInt32(blob, offset+33);
+	comp[ordKey("inAdjustBlend")] = (double)uInt32(blob, offset+5);
+	comp[ordKey("outAdjustBlend")] = (double)uInt32(blob, offset+9);
+	comp[ordKey("inBuffer")] = (double)uInt32(blob, offset+13);
+	comp[ordKey("outBuffer")] = (double)uInt32(blob, offset+17);
+	comp[ordKey("inBufferInvert")] = uInt32(blob, offset+21)==1;
+	comp[ordKey("outBufferInvert")] = uInt32(blob, offset+25)==1;
+	comp[ordKey("enableOnBeat")] = uInt32(blob, offset+29)==1;
+	comp[ordKey("onBeatFrames")] = (double)uInt32(blob, offset+33);
 	
 	QByteArray effectList28plusHeader = "AVS 2.8+ Effect List Config";
 	uint extOffset = offset+41;
@@ -188,14 +189,14 @@ Components::decodeEffectList(uint offset) {
 		contSize = size-41-32-SIZE_INT-extSize;
 		contOffset += 32+SIZE_INT+extSize;
 		QJsonObject code;
-		code["enabled"] = boolean(extOffset+SIZE_INT, SIZE_INT);
+		code[ordKey("enabled")] = boolean(extOffset+SIZE_INT, SIZE_INT);
 		uint initSize = uInt32(blob, extOffset+SIZE_INT*2);
-		code["init"] = sizeString(extOffset+SIZE_INT*2);
-		code["frame"] = sizeString(extOffset+SIZE_INT*3+initSize);
-		comp["code"] = code;
+		code[ordKey("init")] = sizeString(extOffset+SIZE_INT*2);
+		code[ordKey("frame")] = sizeString(extOffset+SIZE_INT*3+initSize);
+		comp[ordKey("code")] = code;
 	} //else: old Effect List format, inside components just start
 	Components content(components, tables, componentDllCodes, blob.mid(contOffset, contSize), 0, window);
-	comp["components"] = content.decode();
+	comp[ordKey("components")] = content.decode();
 	error_ |= content.error();
 	errorCount_ += content.errorCount();
 	return comp;
@@ -204,7 +205,7 @@ Components::decodeEffectList(uint offset) {
 QJsonObject
 Components::decodeMovement (uint offset) {
 	QJsonObject comp;
-	comp["type"] = QString("Movement");
+	comp[ordKey("type")] = QString("Movement");
 	// the special value 0 is because "old versions of AVS barf" if the id is > 15, so
 	// AVS writes out 0 in that case, and sets the actual id at the end of the save block.
 	uint effectIdOld = uInt32(blob, offset);
@@ -223,18 +224,19 @@ Components::decodeMovement (uint offset) {
 		effect = tables->value("movementEffects").toObject()[QString("%1").arg(effectIdNew)].toArray();
 	}
 	if(effect.size()) {
-		comp["builtinEffect"] = effect[0].toString();
+		comp[ordKey("builtinEffect")] = effect[0].toString();
 	}
-	comp["output"] = QString(uInt32(blob, offset+SIZE_INT)==1 ? "50/50" : "Replace");
-	comp["sourceMapped"] = boolean(offset+SIZE_INT*2, SIZE_INT);
-	comp["coordinates"] = call("coordinates", offset+SIZE_INT*3, NULL, SIZE_INT);
-	comp["bilinear"] = boolean(offset+SIZE_INT*4, SIZE_INT);
-	comp["wrap"] = boolean(offset+SIZE_INT*5, SIZE_INT);
+	comp[ordKey("output")] = QString(uInt32(blob, offset+SIZE_INT)==1 ? "50/50" : "Replace");
+	comp[ordKey("sourceMapped")] = boolean(offset+SIZE_INT*2, SIZE_INT);
+	QString coordKey = ordKey("coordinates"); // need to save the key in order to be able overwrite the same value later
+	comp[coordKey] = call("coordinates", offset+SIZE_INT*3, NULL, SIZE_INT);
+	comp[ordKey("bilinear")] = boolean(offset+SIZE_INT*4, SIZE_INT);
+	comp[ordKey("wrap")] = boolean(offset+SIZE_INT*5, SIZE_INT);
 	if(effect.size() && effectIdOld!=1 && effectIdOld!=7) { // 'slight fuzzify' and 'blocky partial out' have no script representation.
 		code = effect[1];
-		comp["coordinates"] = call("coordinates", effect[2].toDouble()); // overwrite
+		comp[coordKey] = call("coordinates", effect[2].toDouble()); // overwrite
 	}
-	comp["code"] = code;
+	comp[ordKey("code")] = code;
 	offset += SIZE_INT*(6+(effectIdOld==0));
 	return comp;
 }
@@ -243,57 +245,57 @@ QJsonObject
 Components::decodeAvi (uint offset) {
 	QJsonObject comp;
 	uint sizeOut = 0;
-	comp["type"] = QString("AVI");
-	comp["enabled"] = boolean(offset, SIZE_INT);
+	comp[ordKey("type")] = QString("AVI");
+	comp[ordKey("enabled")] = boolean(offset, SIZE_INT);
 	QString str = ntString(offset+SIZE_INT*3, &sizeOut);
-	comp["file"] = str;
-	comp["speed"] = (double)uInt32(blob, offset+SIZE_INT*5+sizeOut); // 0: fastest, 1000: slowest
+	comp[ordKey("file")] = str;
+	comp[ordKey("speed")] = (double)uInt32(blob, offset+SIZE_INT*5+sizeOut); // 0: fastest, 1000: slowest
 	uint beatAdd = uInt32(blob, offset+SIZE_INT*3+sizeOut);
 	if(beatAdd==1) {
-		comp["output"] = QString("50/50");
+		comp[ordKey("output")] = QString("50/50");
 	} else {
 		QJsonObject map;
 		map["0"] = QString("Replace");
 		map["1"] = QString("Additive");
 		map["0x100000000"] = QString("50/50");
-		comp["output"] = map8(offset+SIZE_INT, map);
+		comp[ordKey("output")] = map8(offset+SIZE_INT, map);
 	}
-	comp["onBeatAdd"] = (double)beatAdd;
-	comp["persist"] = (double)uInt32(blob, offset+SIZE_INT*4+sizeOut); // 0-32
+	comp[ordKey("onBeatAdd")] = (double)beatAdd;
+	comp[ordKey("persist")] = (double)uInt32(blob, offset+SIZE_INT*4+sizeOut); // 0-32
 	return comp;
 }
 
 QJsonObject
 Components::decodeSimple (uint offset) {
 	QJsonObject comp;
-	comp["type"] = QString("Simple");
+	comp[ordKey("type")] = QString("Simple");
 	uint effect = uInt32(blob, offset);
 	if (effect&(1<<6)) {
-		comp["audioSource"] = QString((effect&2)!=0 ? "Waveform" : "Spectrum");
-		comp["renderType"] = QString("Dots");
+		comp[ordKey("audioSource")] = QString((effect&2)!=0 ? "Waveform" : "Spectrum");
+		comp[ordKey("renderType")] = QString("Dots");
 	} else {
 		switch (effect&3) {
 			case 0: // solid analyzer
-				comp["audioSource"] = QString("Spectrum");
-				comp["renderType"] = QString("Solid");
+				comp[ordKey("audioSource")] = QString("Spectrum");
+				comp[ordKey("renderType")] = QString("Solid");
 				break;
 			case 1: // line analyzer
-				comp["audioSource"] = QString("Spectrum");
-				comp["renderType"] = QString("Lines");
+				comp[ordKey("audioSource")] = QString("Spectrum");
+				comp[ordKey("renderType")] = QString("Lines");
 				break;
 			case 2: // line scope
-				comp["audioSource"] = QString("Waveform");
-				comp["renderType"] = QString("Lines");
+				comp[ordKey("audioSource")] = QString("Waveform");
+				comp[ordKey("renderType")] = QString("Lines");
 				break;
 			case 3: // solid scope
-				comp["audioSource"] = QString("Waveform");
-				comp["renderType"] = QString("Solid");
+				comp[ordKey("audioSource")] = QString("Waveform");
+				comp[ordKey("renderType")] = QString("Solid");
 				break;
 		}
 	}
-	comp["audioChannel"] = call2nd("audioChannel", (double)((effect>>2)&3));
-	comp["positionY"] = call2nd("positionY", (double)((effect>>4)&3));
-	comp["colors"] = colorList(offset+SIZE_INT);
+	comp[ordKey("audioChannel")] = call2nd("audioChannel", (double)((effect>>2)&3));
+	comp[ordKey("positionY")] = call2nd("positionY", (double)((effect>>4)&3));
+	comp[ordKey("colors")] = colorList(offset+SIZE_INT);
 	return comp;
 }
 
@@ -419,7 +421,7 @@ Components::codeSection(uint offset, QJsonArray map, bool nt, uint* sizeOut) {
 	};
 	QJsonObject code;
 	for (int i = 0; i < map.size(); i++) {
-		code[map[i].toArray()[0].toString()] = strings[(uint)(map[i].toArray()[1].toDouble())];
+		code[ordKey(map[i].toArray()[0].toString())] = strings[(uint)(map[i].toArray()[1].toDouble())];
 	}
 	
 	if(sizeOut) *sizeOut = totalSize;
@@ -455,19 +457,19 @@ Components::colorMaps(uint offset, uint* sizeOut) {
 		uint num = uInt32(blob, offset+headerSize*i+SIZE_INT);
 		QJsonArray map = colorMap(mapOffset, num);
 		// check if it's a disabled default {0: #000000, 255: #ffffff} map, and only save it if not.
-		if(!enabled && map.size()==2 && 
+		if(!enabled && map.size()==2 &&
 				map[0].toObject()["color"].toString()=="#000000" && map[0].toObject()["position"].toDouble()==0 &&
 				map[1].toObject()["color"].toString()=="#ffffff" && map[1].toObject()["position"].toDouble()>254.9) {
-			// skip this map
+					// skip this map
 		} else {
 			QJsonObject curMap;
-			curMap["index"] = (double)i;
-			curMap["enabled"] = enabled;
+			curMap[ordKey("index")] = (double)i;
+			curMap[ordKey("enabled")] = enabled;
 			if(ALL_FIELDS) {
-				curMap["id"] = (double)uInt32(blob, offset+headerSize*i+SIZE_INT*2); // id of the map - not really needed.
-				curMap["fileName"] = ntString(offset+headerSize*i+SIZE_INT*3);
+				curMap[ordKey("id")] = (double)uInt32(blob, offset+headerSize*i+SIZE_INT*2); // id of the map - not really needed.
+				curMap[ordKey("fileName")] = ntString(offset+headerSize*i+SIZE_INT*3);
 			}
-			curMap["map"] = map;
+			curMap[ordKey("map")] = map;
 			maps.append(curMap);
 		}
 		mapOffset += num*SIZE_INT*3;
@@ -483,6 +485,7 @@ Components::colorMap (uint offset, uint num) {
 	for (uint i = 0; i < num; i++) {
 		uint pos = uInt32(blob, offset);
 		QJsonObject colorPin;
+		// No ordKey() here because it's already sorted correctly and we need to access color and pos keys in colorMaps().
 		colorPin["color"] = color(offset+SIZE_INT);
 		colorPin["position"] = (double)pos;
 		colorMap.append(colorPin);
@@ -512,9 +515,9 @@ Components::convoFilter(uint offset, QJsonValue dimensions, uint* sizeOut) {
 		data.append((double)int32(offset));
 	}
 	QJsonObject kernel;
-	kernel["width"] = dimArr[0];
-	kernel["height"] = dimArr[1];
-	kernel["data"] = data;
+	kernel[ordKey("width")] = dimArr[0];
+	kernel[ordKey("height")] = dimArr[1];
+	kernel[ordKey("data")] = data;
 	
 	if(sizeOut) *sizeOut = size*SIZE_INT;
 	return kernel;
@@ -619,7 +622,7 @@ Components::bit(uint offset, QJsonValue pos, uint* sizeOut) {
 	}
 }
 
-// these are static because they are needed from the outside
+// these two are static because they are needed from the outside
 uint
 Components::uInt32(QByteArray blob, uint offset) {
 	return *((uint*)(blob.constData()+offset));
@@ -630,6 +633,17 @@ Components::uInt64(QByteArray blob, uint offset) {
 	return *((quint64*)(blob.constData()+offset));
 }
 
+// various helper functions
+/**
+ * @brief Components::ordKey injects ordering prefixes into the keys of
+ *  QJsonObjects. They are removed again in Converter::postProcess().
+ * @param key
+ * @return 
+ */
+QString
+Components::ordKey(QString key) {
+	return QString("__%1__").arg(indexCounter++, 5, 10, QLatin1Char('0'))+key;
+}
 
 void
 Components::log(QString message, bool error) {

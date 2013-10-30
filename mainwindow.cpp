@@ -9,12 +9,12 @@
 MainWindow::MainWindow(QWidget *parent) :
 	QWidget(parent),
 	ui(new Ui::MainWindow),
+	converter(NULL),
 	noneText("[none]"),
 	settings("avsdecoder.ini")
 {
 	ui->setupUi(this);
 	ui->cancelButton->setDisabled(true);
-	converter = NULL;
 	ui->samplePresetSelectBox->addItem(noneText);
 }
 
@@ -65,6 +65,15 @@ MainWindow::indent() {
 	return settings.getIndent();
 }
 
+void
+MainWindow::newConverter() {
+	converter = new Converter(
+				ui->inputPathEdit->text(),
+				ui->outputPathEdit->text(),
+				this,
+				&settings);
+}
+
 // Slots
 
 void
@@ -75,13 +84,11 @@ MainWindow::on_convertButton_clicked()
 	resetProgress();
 	
 	if(converter==NULL) {
-		converter = new Converter(
-					ui->inputPathEdit->text(),
-					ui->outputPathEdit->text(),
-					this);
+		newConverter();
 	}
 	converter->convertAll();
 	delete converter;
+	converter = NULL;
 	ui->cancelButton->setDisabled(true);
 	ui->convertButton->setDisabled(false);
 }
@@ -118,10 +125,7 @@ void
 MainWindow::on_listFilesButton_clicked()
 {
 	if(converter==NULL) {
-		converter = new Converter(
-					ui->inputPathEdit->text(),
-					ui->outputPathEdit->text(),
-					this);
+		newConverter();
 	}
 	QStringList fileList = converter->getFileNameList();
 	ui->samplePresetSelectBox->addItems(fileList);
@@ -147,13 +151,14 @@ MainWindow::on_outputPathEdit_textChanged(const QString &outPath)
 void
 MainWindow::updatePath(QString path, QLineEdit* lineEdit) {
 	QFileInfo dirInfo(path);
-	if(!dirInfo.exists() || !dirInfo.isDir()) {
+	if(!path.isEmpty() && (!dirInfo.exists() || !dirInfo.isDir())) {
 		lineEdit->setStyleSheet("color: red;");
 	} else {
 		lineEdit->setStyleSheet("");
 	}
 	if(converter!=NULL) {
 		delete converter;
+		converter = NULL;
 		log("Converter reset.");
 	}
 	resetProgress();
@@ -164,10 +169,7 @@ MainWindow::on_samplePresetSelectBox_currentIndexChanged(int index)
 {
 	if(ui->convertButton->isEnabled() and index>0) {
 		if(converter==NULL) {
-			converter = new Converter(
-						ui->inputPathEdit->text(),
-						ui->outputPathEdit->text(),
-						this);
+			newConverter();
 		}
 		converter->convert(index-1);
 	}

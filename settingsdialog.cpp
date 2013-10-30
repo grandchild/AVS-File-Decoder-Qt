@@ -12,6 +12,7 @@ SettingsDialog::SettingsDialog(QWidget *parent, Settings* settings) :
 	ui->indent->setChecked(tempSet.getIndent());
 	ui->minimize->setChecked(tempSet.getMinimize());
 	ui->compactKernels->setChecked(tempSet.getCompactKernels());
+	ui->compactKernels->setDisabled(!tempSet.getIndent());
 }
 
 SettingsDialog::~SettingsDialog() {
@@ -36,14 +37,14 @@ SettingsDialog::on_logComponents_stateChanged(int state) {
 
 void
 SettingsDialog::on_indent_stateChanged(int state) {
-	tempSet.setIndent(state==Qt::Checked);
+	bool indent = state==Qt::Checked;
+	tempSet.setIndent(indent);
+	ui->compactKernels->setDisabled(!indent);
 }
 
 void
 SettingsDialog::on_minimize_stateChanged(int state) {
-	bool minimize = state==Qt::Checked;
-	tempSet.setMinimize(minimize);
-	ui->compactKernels->setDisabled(minimize);
+	tempSet.setMinimize(state==Qt::Checked);
 }
 
 void

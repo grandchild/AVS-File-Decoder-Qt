@@ -11,10 +11,11 @@
 #include "defines.h"
 #include "components.h"
 
-Converter::Converter(QString inPath, QString outPath, MainWindow* window):
+Converter::Converter(QString inPath, QString outPath, MainWindow* window, Settings* settings):
     inPath(inPath),
     outPath(outPath),
 	window(window),
+	settings(settings),
 	stop(false),
 	error(false)
 {
@@ -68,6 +69,33 @@ Converter::loadConfig() {
 	} else {
 		window->log("'"+tablesFile.fileName()+"' does not exist.", /*error*/true);
 	}
+}
+
+QByteArray
+Converter::clearComments(QByteArray json) {
+	char* jsonOut = new char[json.size()];
+	bool skip = false;
+	bool string = false;
+	char* c = json.data();
+	uint i=0;
+	do {
+		if(*c=='\"') {
+			string = !string;
+		}
+		if(!string && *c=='/' && *(c+1)=='/') {
+			skip = true;
+		}
+		if(*c=='\x0A' || *c=='\x0D') {
+			skip = false;
+		}
+		jsonOut[i] = *(c++);
+		if(!skip) {
+			++i;
+		}
+	} while(*c!='\0');
+	QByteArray jsonOutBA(jsonOut, i);
+	delete[] jsonOut;
+	return jsonOutBA;
 }
 
 void
@@ -125,7 +153,12 @@ Converter::convertAll() {
 		QString json = convertSingle(file);
 		bool ok = !json.isEmpty();
 		if(ok) {
+			// post-process here...
+			// json = postProcess(json);
+			
 			// write to file here...
+			// write(file, json);
+			
 			window->output(json);
 		}
 		window->incrProgress();
@@ -150,19 +183,19 @@ Converter::convertSingle(QFileInfo file) {
 	bool ok = true;
 	QJsonDocument preset;
 	QJsonObject rootObj;
-	rootObj["name"] = file.fileName();
-	rootObj["date"] = file.lastModified().toString(Qt::ISODate);
+	Components comps(&components,
+					 &tables,
+					 &componentDllCodes,
+					 blob,
+					 /*offset*/AVS_HEADER_LENGTH,
+					 window);
+	rootObj[comps.ordKey("name")] = file.fileName();
+	rootObj[comps.ordKey("date")] = file.lastModified().toString(Qt::ISODate);
 	//rootObj["author"] = guessAuthor(file.fileName()); // TODO: extract likely author name from filename
 	QJsonValue clearFrame = decodePresetHeader(blob);
 	if(clearFrame.isBool()) {
-		rootObj["clearFrame"] = clearFrame;
-		Components comps(&components,
-						 &tables,
-						 &componentDllCodes,
-						 blob,
-						 /*offset*/AVS_HEADER_LENGTH,
-						 window);
-		rootObj["components"] = comps.decode();
+		rootObj[comps.ordKey("clearFrame")] = clearFrame;
+		rootObj[comps.ordKey("components")] = comps.decode();
 		ok &= !comps.error();
 	} else {
 		window->log("Invalid header", /*error*/true);
@@ -170,8 +203,7 @@ Converter::convertSingle(QFileInfo file) {
 	}
 	
 	preset.setObject(rootObj);
-	
-	QString json = preset.toJson(window->indent() ? QJsonDocument::Indented : QJsonDocument::Compact);
+	QString json = postProcess(preset);
 	if(json.isEmpty()) {
 		window->log("JSON output is empty.", /*error*/true);
 		ok = false;
@@ -200,30 +232,34 @@ Converter::decodePresetHeader(QByteArray blob) {
 }
 
 QByteArray
-Converter::clearComments(QByteArray json) {
-	char* jsonOut = new char[json.size()];
-	bool skip = false;
-	bool string = false;
-	char* c = json.data();
-	uint i=0;
-	do {
-		if(*c=='\"') {
-			string = !string;
+Converter::postProcess(QJsonDocument preset) {	
+	QByteArray json = preset.toJson(window->indent() ? QJsonDocument::Indented : QJsonDocument::Compact);
+	
+	// remove ordering indices (TODO: how much deep copying is done here? more than once? optimization possible? measure!)	
+	QString jsonStr(json);
+	jsonStr.replace(QRegExp("([^\\\\])\"__\\d{5}__"), "\\1\"");
+	
+	// minimize empty fields
+	if(settings->getMinimize()) {
+		QString rx = "\"\\w+\" ?: ?\"\",?";
+		if(settings->getIndent()) {
+			rx = "(\\n|\\r|\\n\\r) *"+rx;
 		}
-		if(!string && *c=='/' && *(c+1)=='/') {
-			skip = true;
-		}
-		if(*c=='\x0A' || *c=='\x0D') {
-			skip = false;
-		}
-		jsonOut[i] = *(c++);
-		if(!skip) {
-			++i;
-		}
-	} while(*c!='\0');
-	QByteArray jsonOutBA(jsonOut, i);
-	free(jsonOut);
-	return jsonOutBA;
+		jsonStr.replace(QRegExp(rx), "");
+	}
+	json = jsonStr.toLatin1();
+	
+	// format convolution kernels
+	/*
+	QRegExp kernelRegEx("\"kernel\":");
+	int pos = 0;
+	uint length = 0;
+	while((pos = kernelRegEx.indexIn(json, pos+length)) >= 0) {
+		length = kernelRegEx.matchedLength();
+		
+	}
+	//*/
+	return json;
 }
 
 void

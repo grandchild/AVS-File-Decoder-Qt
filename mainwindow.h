@@ -44,12 +44,12 @@ private slots:
 private:
 	Ui::MainWindow* ui;
 	Converter* converter;
-	double progressIncr;
 	QString noneText;
 	Settings settings;
 	
 	void selectDirPath(QLineEdit* pathEdit);
 	void updatePath(QString path, QLineEdit* lineEdit);
+	void newConverter();
 };
 
 #endif // MAINWINDOW_H

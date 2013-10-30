@@ -20,8 +20,10 @@ public:
 			   QByteArray blob, uint offset,
 			   MainWindow* window = NULL);
     QJsonArray decode();
+	QString ordKey(QString key);
 	bool error();
 	int errorCount();
+	
 	static uint uInt32(QByteArray blob, uint offset);
 	static quint64 uInt64(QByteArray blob, uint offset);
 	
@@ -32,6 +34,7 @@ private:
 	QByteArray blob;
 	uint offset;
     MainWindow* window;
+	uint indexCounter;
 	bool error_;
 	int errorCount_;
     
@@ -67,6 +70,7 @@ private:
 	qint32 int32(uint offset, uint* sizeOut = NULL);
 	QJsonValue float32 (uint offset, uint* sizeOut = NULL);
 	QJsonValue bit (uint offset, QJsonValue pos, uint* sizeOut = NULL);
+	
 	
     void log(QString message, bool error = false);
 };

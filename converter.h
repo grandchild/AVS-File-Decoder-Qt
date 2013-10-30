@@ -14,7 +14,7 @@
 class Converter
 {
 public:
-    Converter(QString inPath, QString outPath, MainWindow* window);
+    Converter(QString inPath, QString outPath, MainWindow* window, Settings* settings);
     
     QStringList getFileNameList();
 	void logComponents();
@@ -30,6 +30,7 @@ private:
     QByteArray json;
     QFileInfoList fileList;
 	MainWindow* window;
+	Settings* settings;
 	
 	QHash<int, QByteArray> componentDllCodes;
 	bool stop; // stops execution if set to true
@@ -40,10 +41,11 @@ private:
 	
 	QString convertSingle(QFileInfo file);
 	
+	QByteArray clearComments(QByteArray json);
 	QJsonValue decodePresetHeader(QByteArray blob);
 	QJsonArray decodeComponents(QByteArray blob, uint offset);
 	int getComponentIndex(uint code, QByteArray blob, uint offset);
-	QByteArray clearComments(QByteArray json);
+	QByteArray postProcess(QJsonDocument preset);
 };
 
 #endif // CONVERTER_H
