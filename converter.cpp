@@ -247,18 +247,26 @@ Converter::postProcess(QJsonDocument preset) {
 		}
 		jsonStr.replace(QRegExp(rx), "");
 	}
-	json = jsonStr.toLatin1();
 	
 	// format convolution kernels
 	/*
-	QRegExp kernelRegEx("\"kernel\":");
+	QRegExp kernelHeaderRx("\\s+\"kernel\": \\{\\n"
+						"\\s+\"width\": ([0-9]+),\\n"
+						"\\s+\"height\": [0-9]+,\\n"
+						"\\s+\"data\": \\[\\n");
 	int pos = 0;
 	uint length = 0;
-	while((pos = kernelRegEx.indexIn(json, pos+length)) >= 0) {
-		length = kernelRegEx.matchedLength();
-		
+	while((pos = kernelHeaderRx.indexIn(jsonStr, pos+length)) >= 0) {
+		length = kernelHeaderRx.matchedLength();
+		bool ok = true;
+		uint width = kernelHeaderRx.cap(1).toUInt(&ok);
+		QString substr = jsonStr.mid(pos, length);
+		for(uint i=0; i<width; i++) {
+			jsonStr.replace(QRegExp("\\s*"), "");
+		}
 	}
 	//*/
+	json = jsonStr.toLatin1();
 	return json;
 }
 

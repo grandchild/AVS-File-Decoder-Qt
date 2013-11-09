@@ -34,7 +34,7 @@ Settings::readSettingsFile() {
 		do {
 			settingsLine = settingsFile.readLine();
 			varVal.indexIn(settingsLine);
-			qDebug() << "decoding " << settingsLine << " - cap(1) " << varVal.cap(1);
+			//qDebug() << "decoding " << settingsLine << " - cap(1) " << varVal.cap(1);
 			if(varVal.cap(1)=="logLevel") {
 				logLevel = varVal.cap(2).toInt(&ok);
 				qDebug() << "logLevel " << logLevel;

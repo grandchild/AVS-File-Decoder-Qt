@@ -28,6 +28,7 @@
 		 "9": "EveryOtherPixel",
 		"10": "Multiply",
 		"11": "Adjustable",
+		// don't ask me....
 		"13": "Buffer"
 	},
 	
@@ -82,6 +83,11 @@
 		"6": "Multiply",
 		"7": "Adjustable",
 		"8": "XOR"
+	},
+	
+	"blendmodeTexer": {
+		"0": "Texture",
+		"1": "Masked Texture"
 	},
 	
 	"keyColorMap": {
@@ -139,6 +145,8 @@
 		"2": "Center"
 	},
 	
+	// pretty much directly from vis_avs/r_trans.cpp
+	// [name, script code representation (if any), 0:polar/1:cartesian]
 	"movementEffects": {
 		 "0": ["None", "", 0],
 		 "1": ["Slight Fuzzify", "", 0],
@@ -154,7 +162,7 @@
 		"11": ["5 Pointed Distro", "d = d * (0.95 + (cos(((r-$PI*0.5) * 5.0) - ($PI / 2.50)) * 0.03));", 0],
 		"12": ["Tunneling", "r = r + 0.04;\r\nd = d * (0.96 + cos(d * $PI) * 0.05);", 0],
 		"13": ["Bleedin'", "t = cos(d * $PI);\r\nr = r + (0.07 * t);\r\nd = d * (0.98 + t * 0.10);", 0],
-		"14": ["Shifted Big Swirl Out", "d=sqrt(x*x+y*y); r=atan2(y,x);\r\nr=r+0.1-0.2*d; d=d*0.96;\r\nx=cos(r)*d + 8/128; y=sin(r)*d;", 0, 1],
+		"14": ["Shifted Big Swirl Out", "d=sqrt(x*x+y*y); r=atan2(y,x);\r\nr=r+0.1-0.2*d; d=d*0.96;\r\nx=cos(r)*d + 8/128; y=sin(r)*d;", 0, 1], // comment from AVS src: // this is a very bad approximation in script. fixme.
 		"15": ["Psychotic Beaming Outward", "d = 0.15", 0],
 		"16": ["Cosine Radial 3-way", "r = cos(r * 3)", 0],
 		"17": ["Spinny Tube", "d = d * (1 - ((d - .35) * .5));\r\nr = r + .1;", 0],
@@ -164,6 +172,13 @@
 		"21": ["Grapevine", "x = x + (cos(abs(y-.5) * 8) * .02);\r\ny = y + (sin(abs(x-.5) * 8) * .05);\r\nx = x * .95;\r\ny = y * .95;", 1],
 		"22": ["Quadrant", "y = y * ( 1 + (sin(r + $PI/2) * .3) );\r\nx = x * ( 1 + (cos(r + $PI/2) * .3) );\r\nx = x * .995;\r\ny = y * .995;", 1],
 		"23": ["6-way Kaleida (use Wrap!)", "y = (r*6)/($PI); x = d;", 1]
+	},
+	
+	"multiFilterEffect": {
+		"0": "Chrome",
+		"1": "Double Chrome",
+		"2": "Triple Chrome",
+		"3": "Infinite Root Multiplier + Small Border Convolution"
 	},
 	
 	"codePFBI": [

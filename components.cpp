@@ -106,9 +106,9 @@ Components::decodeGeneric(uint offset, uint end, QString name, QString group, QJ
 		QString k = fields[i].toObject().keys()[0];
 		QJsonValue f = fields[i].toObject()[k];
 		if(VERBOSE>=2) log("Field: "+k);
-		if(QRegExp("^null[_0-9]*$").exactMatch(k)) {
+		if(k=="null") {
 			offset += (uint)f.toDouble();
-			// '"null_": "0"' resets bitfield continuity to allow several consecutive bitfields (hasn't been necessary yet thogh)
+			// '"null": "0"' resets bitfield continuity to allow several consecutive bitfields (hasn't been necessary yet thogh)
 			lastWasABitField = false;
 			continue;
 		}

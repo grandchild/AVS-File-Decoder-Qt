@@ -12,13 +12,13 @@
 			{"colorLow": "color"},
 			{"colorBottom": "color"},
 			{"angle": "int32"},
-			{"null0": 4} // [see comment on dot fountan]
+			{"null": 4} // [see comment on dot fountan]
 		]},
 	{"name": "Oscilliscope Star", // r_oscstar.cpp
 		"code": "0x02", "group": "Render", "func": "generic", "fields": [
 			{"audioChannel": ["bit", [2,3], "audioChannel"]},
 			{"positionX": ["bit", [4,5], "positionX"]},
-			{"null0": 3},
+			{"null": 3},
 			{"colors": "colorList"},
 			{"size": 4},
 			{"rotation": 4}
@@ -51,7 +51,7 @@
 		"code": "0x07", "group": "Trans", "func": "generic", "fields": [
 			{"enabledLeft": ["bit", 0, "boolified"]},
 			{"enabledRight": ["bit", 1, "boolified"]},
-			{"null0": 3}, // fill up bitfield
+			{"null": 3}, // fill up bitfield
 			{"colorLeft": "color"},
 			{"colorRight": "color"},
 			{"mode": ["map4", {"0": "Lines", "1": "Triangles"}]}
@@ -60,7 +60,7 @@
 		"code": "0x08", "group": "Render", "func": "generic", "fields": [
 			{"enabled": ["bit", 0, "boolified"]},
 			{"onBeatSizeChange": ["bit", 1, "boolified"]},
-			{"null0": 3}, // fill up bitfield
+			{"null": 3}, // fill up bitfield
 			{"color": "color"},
 			{"range": 4}, // 1-20: min(h/2,w*(3/8))*range/32.0
 			{"size": 4},
@@ -87,7 +87,7 @@
 			{"enabled": ["bit", 0, "boolified"]},
 			{"onBeat": ["bit", 2, "boolified"]}, // i changed the order a bit here
 			{"onBeatRandom": ["bit", 1, "boolified"]},
-			{"null0": 3}, // fill up bitfield
+			{"null": 3}, // fill up bitfield
 			{"fader1": "int32"}, // all faders go from -32 to 32
 			{"fader2": "int32"},
 			{"fader3": "int32"},
@@ -110,7 +110,7 @@
 		"code": "0x0E", "group": "Render", "func": "generic", "fields": [
 			{"audioChannel": ["bit", [2,3], "audioChannel"]},
 			{"positionX": ["bit", [4,5], "positionX"]},
-			{"null0": 3},
+			{"null": 3},
 			{"colors": "colorList"},
 			{"size": 4},
 			{"audioSource": ["uInt32", 4, "audioSource"]}
@@ -145,7 +145,7 @@
 			{"colorLow": "color"},
 			{"colorBottom": "color"},
 			{"angle": "int32"},
-			{"null0": 4} // most likely current rotation, has some huge value, has no ui, is basically arbitrary depending on time of save, not converted
+			{"null": 4} // most likely current rotation, has some huge value, has no ui, is basically arbitrary depending on time of save, not converted
 		]},
 	{"name": "Water", // r_water.cpp
 		"code": "0x14", "group": "Trans", "func": "generic", "fields": [
@@ -200,7 +200,7 @@
 			{"bottomToTop": ["bit", 1, "boolified"]},
 			{"leftToRight": ["bit", 2, "boolified"]},
 			{"rightToLeft": ["bit", 3, "boolified"]},
-			{"null0": 3}, // fill up bitfield space
+			{"null": 3}, // fill up bitfield space
 			{"onBeat": ["boolean", 4]},
 			{"smooth": ["boolean", 4]},
 			{"speed": 4}
@@ -228,9 +228,9 @@
 			{"horizontalAlign": ["map4", {"0": "Left", "1": "Center", "2": "Right"}]},
 			{"onBeatSpeed": 4},
 			{"normSpeed": 4},
-			{"null0": 60}, // Win CHOOSEFONT structure, little relevance afaics
+			{"null": 60}, // Win CHOOSEFONT structure, little relevance afaics
 			// Win LOGFONT structure, 60bytes, this is more interesting:
-				{"null1": 16}, // LONG  lfHeight;
+				{"null": 16}, // LONG  lfHeight;
 								// LONG  lfWidth;
 								// LONG  lfEscapement;
 								// LONG  lfOrientation;
@@ -240,7 +240,7 @@
 				{"underline": ["boolean", 1]}, // BYTE  lfUnderline;
 				{"strikeOut": ["boolean", 1]}, // BYTE  lfStrikeOut;
 				{"charSet": 1}, // BYTE  lfCharSet;
-				{"null2": 4}, // BYTE  lfOutPrecision;
+				{"null": 4}, // BYTE  lfOutPrecision;
 								// BYTE  lfClipPrecision;
 								// BYTE  lfQuality;
 								// BYTE  lfPitchAndFamily;
@@ -265,7 +265,7 @@
 			{"code": "codeFBI"},
 			{"showDot": ["boolean", 4]},
 			{"invertDepth": ["boolean", 4]},
-			{"null0": 4},
+			{"null": 4},
 			{"depthBuffer": ["bufferNum", 4]}
 		]},
 	{"name": "Mosaic", // r_mosaic.cpp
@@ -310,7 +310,7 @@
 		]},
 	{"name": "Dynamic Distance Modifier", // r_ddm.cpp
 		"code": "0x23", "group": "Trans", "func": "generic", "fields": [
-			{"null0": 1},
+			{"null": 1},
 			{"code": "codePFBI"},
 			{"output": ["map4", {"0": "Replace", "1": "50/50"}]},
 			{"bilinear": ["boolean", 4]}
@@ -321,7 +321,7 @@
 			{"code": "codePFBI"},
 			{"audioChannel": ["bit", [0,1], "audioChannel"]},
 			{"audioSource": ["bit", 2, "audioSource"]},
-			{"null0": 3}, // padding, bitfield before is actually 32 bit
+			{"null": 3}, // padding, bitfield before is actually 32 bit
 			{"colors": "colorList"},
 			{"lineType": ["drawMode", 4]}
 		]},
@@ -355,7 +355,7 @@
 		"code": "0x29", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"numberOfLayers": 4},
-			{"null0": 4}, // current rotation, is virtually arbitrary - not converted
+			{"null": 4}, // current rotation, is virtually arbitrary - not converted
 			{"distance": 4}, // 1 to 64
 			{"alpha": 4}, // 1 to 255
 			{"rotation": "int32"}, // 32 to -32 (ui has inverted range)
@@ -406,16 +406,28 @@
 			{"readCommentCodes": ["boolean", 4]},
 			{"code": "ntString"}
 		]},
+	{"name": "Texer",
+		"code": // Texer...........................
+			["0x54", "0x65", "0x78", "0x65", "0x72", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
+		"group": "Misc", "func": "generic", "fields": [
+			{"null": 16},
+			{"image": ["sizeString", 260]},
+			{"input": ["bit", 0, "blendmodeIn"]},
+			{"output": ["bit", 2, "blendmodeTexer"]},
+			{"null": 3}, // fill up bitfield
+			{"particles": 4},
+			{"null": 4}
+		]},
 	{"name": "Texer II",
 		"code":
 			["0x41", "0x63", "0x6B", "0x6F", "0x2E", "0x6E", "0x65", "0x74", "0x3A", "0x20", "0x54", "0x65", "0x78", "0x65", "0x72", "0x20", "0x49", "0x49", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Render", "func": "generic", "fields": [
-			{"null0": 4},
+			{"null": 4},
 			{"image": ["sizeString", 260]},
 			{"resizing": ["boolean", 4]},
 			{"wrap": ["boolean", 4]},
 			{"coloring": ["boolean", 4]},
-			{"null1": 4},
+			{"null": 4},
 			{"code": "codeIFBP"}
 		]},
 	{"name": "Color Map",
@@ -425,7 +437,7 @@
 			{"key": ["keyColorMap", 4]},
 			{"output": ["blendmodeColorMap", 4]},
 			{"mapCycling": ["cyclemodeColorMap", 4]},
-			{"null0": 2},
+			{"null": 2},
 			{"dontSkipFastBeats": ["boolean", 1]},
 			{"cycleSpeed": 1}, // 1 to 64
 			{"maps": "colorMaps"}
@@ -486,7 +498,7 @@
 		"code":
 			["0x43", "0x6F", "0x6C", "0x6F", "0x72", "0x20", "0x52", "0x65", "0x64", "0x75", "0x63", "0x74", "0x69", "0x6F", "0x6E", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Trans", "func": "generic", "fields": [
-			{"null0": 260}, // MAX_PATH - space for a file path, unused
+			{"null": 260}, // MAX_PATH - space for a file path, unused
 			{"colors": ["map4", {"1": 2, "2": 4, "3": 8, "4": 16, "5": 32, "6": 64, "7": 128, "8": 256}]}
 		]},
 	{"name": "Multi Delay", // r_multidelay.cpp
@@ -544,7 +556,7 @@
 			["0x4A", "0x68", "0x65", "0x72", "0x69", "0x6B", "0x6F", "0x3A", "0x20", "0x47", "0x6C", "0x6F", "0x62", "0x61", "0x6C", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Misc", "func": "generic", "fields": [
 			{"load": ["map4", {"0": "None", "1": "Once", "2": "CodeControl", "3": "EveryFrame"}]},
-			{"null0": 24},
+			{"null": 24},
 			{"code": "codeIFBnt"},
 			{"file": "ntString"},
 			{"saveRegRange": "ntString"},
@@ -554,7 +566,7 @@
 		"code":
 			["0x47", "0x65", "0x69", "0x73", "0x73", "0x46", "0x6C", "0x75", "0x69", "0x64", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
 		"group": "Misc", "func": "generic", "fields": [
-			{"null0": 4} // Fluid saves its parameter globally somewhere, not in the preset file - great... :/
+			{"null": 4} // Fluid saves its parameter globally somewhere, not in the preset file - great... :/
 		]},
 	{"name": "Picture II",
 		"code":
@@ -567,5 +579,14 @@
 			{"onBeatBilinear": ["boolean", 4]},
 			{"adjustBlend": 4}, // 0 to 255
 			{"onBeatAdjustBlend": 4} // 0 to 255
+		]},
+	{"name": "MultiFilter",
+		"code": // Jheriko : MULTIFILTER...........
+			["0x4A", "0x68", "0x65", "0x72", "0x69", "0x6B", "0x6F", "0x20", "0x3A", "0x20", "0x4D", "0x55", "0x4C", "0x54", "0x49", "0x46", "0x49", "0x4C", "0x54", "0x45", "0x52", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
+		"group": "Misc", "func": "generic", "fields": [
+			{"enabled": ["boolean", 4]},
+			{"effect": ["multiFilterEffect", 4]},
+			{"onBeat": ["boolean", 4]},
+			{"null": ["boolean", 4]}
 		]}
 ]
