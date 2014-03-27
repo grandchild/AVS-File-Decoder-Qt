@@ -181,6 +181,22 @@
 		"3": "Infinite Root Multiplier + Small Border Convolution"
 	},
 	
+	"particleSystemAccelerationType": {
+		"0": "Constant",
+		"1": "Fade out by 0.9",
+		"2": "Fade out by 0.6",
+		"3": "Cosine",
+		"4": "Squared Cosine"
+	},
+	
+	"particleSystemColorBounce": {
+		"0": "Stop",
+		"1": "Wrap each",
+		"2": "Wave each",
+		"3": "Wrap all",
+		"4": "Wave all"
+	},
+	
 	"codePFBI": [
 		["init", 3],
 		["perFrame", 1],
