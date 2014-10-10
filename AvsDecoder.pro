@@ -13,21 +13,26 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    converter.cpp \
-    components.cpp \
     settingsdialog.cpp \
-    settings.cpp
+    settings.cpp \
+    createoutputdialog.cpp \
+    convertcontroller.cpp \
+    converter.cpp \
+    job.cpp
 
 HEADERS  += mainwindow.h \
-    converter.h \
     convertexception.h \
     defines.h \
-    components.h \
     settingsdialog.h \
-    settings.h
+    settings.h \
+    createoutputdialog.h \
+    convertcontroller.h \
+    converter.h \
+    job.h
 
 FORMS    += mainwindow.ui \
-    settingsdialog.ui
+    settingsdialog.ui \
+    createoutputdialog.ui
 
 INCLUDEPATH += $$PWD/include
 

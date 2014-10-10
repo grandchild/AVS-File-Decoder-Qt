@@ -3,19 +3,26 @@
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "converter.h"
+#include "convertcontroller.h"
 #include "settingsdialog.h"
+#include "defines.h"
+#include "createoutputdialog.h"
 
 MainWindow::MainWindow(QWidget *parent) :
 	QWidget(parent),
 	ui(new Ui::MainWindow),
 	converter(NULL),
 	noneText("[none]"),
-	settings("avsdecoder.ini")
+	settings("avsdecoder.ini"),
+	inputChanged(false),
+	threadInfo(QMap<uint, QString>())
 {
+	converterThread = new QThread();
 	ui->setupUi(this);
 	ui->cancelButton->setDisabled(true);
 	ui->samplePresetSelectBox->addItem(noneText);
+	ui->inputPathEdit->setText("D:\\Daten\\Dropbox");
+	ui->outputPathEdit->setText("D:\\Daten\\Desktop");
 }
 
 MainWindow::~MainWindow() {
@@ -39,18 +46,18 @@ MainWindow::output(QString json) {
 }
 
 void
-MainWindow::setProgressMax(int size) {
+MainWindow::on_setProgressMax(int size) {
 	ui->progressBar->setMaximum(size);
 }
 
 void
-MainWindow::incrProgress() {
+MainWindow::on_incrProgress() {
 	int curValue = ui->progressBar->value();
 	ui->progressBar->setValue(++curValue);
 }
 
 void
-MainWindow::resetProgress() {
+MainWindow::on_resetProgress() {
 	ui->progressBar->reset();
 }
 
@@ -65,13 +72,35 @@ MainWindow::indent() {
 	return settings.getIndent();
 }
 
-void
+bool
 MainWindow::newConverter() {
-	converter = new Converter(
+	if(!QFile(ui->inputPathEdit->text()).exists()){
+		log("Input path does not exist.", /*error*/true);
+		return false;
+	}
+	if(converter != NULL) {
+		converter->finish();
+		delete converter;
+	}
+	inputChanged = false;
+	on_resetProgress();
+	converter = new ConvertController(
 				ui->inputPathEdit->text(),
 				ui->outputPathEdit->text(),
 				this,
 				&settings);
+	converter->moveToThread(converterThread);
+	connect(converterThread, &QThread::finished, converter, &QObject::deleteLater);
+	connect(converter, &ConvertController::controller_log, this, &MainWindow::on_log);
+	connect(converter, &ConvertController::controller_output, this, &MainWindow::on_output);
+	connect(converter, &ConvertController::controller_setProgressMax, this, &MainWindow::on_setProgressMax);
+	connect(converter, &ConvertController::controller_resetProgress, this, &MainWindow::on_resetProgress);
+	connect(converter, &ConvertController::controller_incrProgress, this, &MainWindow::on_incrProgress);
+	connect(converter, &ConvertController::controller_addSelectPreset, this, &MainWindow::on_addSelectPreset);
+	connect(converter, &ConvertController::controller_updateThreadInfo, this, &MainWindow::on_updateThreadInfo);
+	converterThread->start();
+	converter->setFileList(); // there are slots to be signalled, so we start this here and not in the constructor.
+	return true;
 }
 
 // Slots
@@ -80,15 +109,26 @@ void
 MainWindow::on_convertButton_clicked()
 {
 	ui->cancelButton->setDisabled(false);
-	ui->convertButton->setDisabled(true);	
-	resetProgress();
+	ui->convertButton->setDisabled(true);
 	
-	if(converter==NULL) {
-		newConverter();
+	if(converter==NULL or inputChanged) {
+		if(!newConverter()) {
+			return;
+		}
 	}
-	converter->convertAll();
-	delete converter;
-	converter = NULL;
+	QFileInfo outPath(ui->outputPathEdit->text());
+	if(!outPath.isDir()) {
+		CreateOutputDialog createOutputDialog(this, outPath);
+		if(createOutputDialog.exec()==QDialog::Accepted) {
+			QDir outDir;
+			outDir.mkpath(outPath.absoluteFilePath());
+			// update the display coloring of the output dir, now that we've created it.
+			on_outputPathEdit_textChanged(ui->outputPathEdit->text());
+		} else {
+			return;
+		}
+	}
+	converter->convert();
 	ui->cancelButton->setDisabled(true);
 	ui->convertButton->setDisabled(false);
 }
@@ -96,7 +136,7 @@ MainWindow::on_convertButton_clicked()
 void
 MainWindow::on_cancelButton_clicked()
 {
-	converter->setStop();
+	converter->finish();
 	ui->cancelButton->setDisabled(true);
 	ui->convertButton->setDisabled(false);
 }
@@ -124,14 +164,12 @@ MainWindow::selectDirPath(QLineEdit* pathEdit) {
 void
 MainWindow::on_listFilesButton_clicked()
 {
-	if(converter==NULL) {
-		newConverter();
+	if(converter==NULL or inputChanged) {
+		if(!newConverter()) {
+			return;
+		}
 	}
-	QStringList fileList = converter->getFileNameList();
-	ui->samplePresetSelectBox->addItems(fileList);
-	foreach (QString fileName, fileList) {
-		log(fileName);
-	}
+	converter->logFileNameList();
 }
 
 void
@@ -156,12 +194,7 @@ MainWindow::updatePath(QString path, QLineEdit* lineEdit) {
 	} else {
 		lineEdit->setStyleSheet("");
 	}
-	if(converter!=NULL) {
-		delete converter;
-		converter = NULL;
-		log("Converter reset.");
-	}
-	resetProgress();
+	inputChanged = true;
 }
 
 void
@@ -169,10 +202,35 @@ MainWindow::on_samplePresetSelectBox_currentIndexChanged(int index)
 {
 	if(ui->convertButton->isEnabled() and index>0) {
 		if(converter==NULL) {
-			newConverter();
+			if(!newConverter()) {
+				return;
+			}
 		}
 		converter->convert(index-1);
 	}
+}
+
+void MainWindow::on_updateThreadInfo(uint threadId, QString info)
+{
+	if(!threadInfo.contains(threadId) && threadInfo.size() >= converter->threadNum()) {
+		qDebug() << "A wild thread appeared, it's not very effective.";
+		threadInfo.remove(threadInfo.keys()[0]);
+	}
+	threadInfo[threadId] = info;
+	QString threadList("");
+	QMapIterator<uint, QString> it(threadInfo);
+	while(it.hasNext()) {
+		it.next();
+		threadList = threadList+QString::number(it.key(), 16)+ ": <b>"+it.value()+"</b><br />";
+	}
+	qDebug() << threadList;
+	ui->threadLog->setHtml("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\
+				<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\
+				p, li { white-space: pre-wrap; }\
+				</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;\">\
+				<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">"+
+				threadList+
+				"</p></body></html>");
 }
 
 void
@@ -180,4 +238,19 @@ MainWindow::on_pushButton_clicked()
 {
 	SettingsDialog settingsDialog(this, &settings);
 	settingsDialog.exec();
+}
+
+void
+MainWindow::on_log(QString message, bool error) {
+	log(message, error);
+}
+
+void
+MainWindow::on_output(QString json) {
+	output(json);
+}
+
+void
+MainWindow::on_addSelectPreset(QString filename) {
+	ui->samplePresetSelectBox->addItem(filename);
 }

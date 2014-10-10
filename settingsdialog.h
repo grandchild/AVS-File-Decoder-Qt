@@ -24,6 +24,7 @@ private slots:
 	void on_indent_stateChanged(int state);
 	void on_minimize_stateChanged(int state);
 	void on_compactKernels_stateChanged(int state);
+	void on_subdirs_stateChanged(int state);
 	
 private:
 	Settings tempSet;

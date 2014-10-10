@@ -7,7 +7,14 @@
 Settings::Settings(QString settingsFile):
 	file(settingsFile)
 {
-	readSettingsFile();
+	if(!readSettingsFile()) {
+		//default settings:
+		logLevel = 1;
+		indent = true;
+		minimize = false;
+		compactKernels = false;
+		subdirs = true;
+	}
 }
 
 Settings::Settings(Settings* other) {
@@ -21,6 +28,7 @@ Settings::copyFrom(Settings* other) {
 	this->indent = other->indent;
 	this->minimize = other->minimize;
 	this->compactKernels = other->compactKernels;
+	this->subdirs = other->subdirs;
 }
 
 bool
@@ -47,6 +55,9 @@ Settings::readSettingsFile() {
 			} else if(varVal.cap(1)=="compactKernels") {
 				compactKernels = varVal.cap(2).toInt(&ok)==1;
 				qDebug() << "compactKernels " << compactKernels;
+			} else if(varVal.cap(1)=="subdirs") {
+				subdirs = varVal.cap(2).toInt(&ok)==1;
+				qDebug() << "subdirs " << subdirs;
 			}
 			if(!ok) break;
 		} while(!settingsLine.isEmpty());
@@ -67,7 +78,8 @@ Settings::writeSettingsFile() {
 				QString("logLevel=%1\r\n").arg(logLevel)+
 				QString("indent=%1\r\n").arg(indent==1?1:0)+
 				QString("minimize=%1\r\n").arg(minimize==1?1:0)+
-				QString("compactKernels=%1\r\n").arg(compactKernels==1?1:0)
+				QString("compactKernels=%1\r\n").arg(compactKernels==1?1:0)+
+				QString("subdirs=%1\r\n").arg(subdirs==1?1:0)
 			).toLatin1()
 		);
 	settingsFile.write(outBA.data());

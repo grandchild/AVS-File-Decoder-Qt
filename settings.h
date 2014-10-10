@@ -14,11 +14,13 @@ public:
 	bool getIndent() { return indent; }
 	bool getMinimize() { return minimize; }
 	bool getCompactKernels() { return compactKernels; }
+	bool getSubdirs() { return subdirs; }
 	
 	void setLogLevel(int logLevel) { this->logLevel = logLevel; }
 	void setIndent(bool indent) { this->indent = indent; }
 	void setMinimize(bool minimize) { this->minimize = minimize; }
 	void setCompactKernels(bool compactKernels) { this->compactKernels = compactKernels; }
+	void setSubdirs(bool subdirs) { this->subdirs = subdirs; }
 	
 	void copyFrom(Settings* other);
 	bool writeSettingsFile();
@@ -33,6 +35,7 @@ private:
 	bool indent;
 	bool minimize;
 	bool compactKernels;
+	bool subdirs;
 	
 	bool readSettingsFile();
 };

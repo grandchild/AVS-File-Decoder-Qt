@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>365</width>
-    <height>183</height>
+    <height>199</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -124,6 +124,25 @@
          </widget>
         </item>
         <item>
+         <widget class="QCheckBox" name="subdirs">
+          <property name="toolTip">
+           <string>Mirror the input directory structure in the output directory.</string>
+          </property>
+          <property name="locale">
+           <locale language="German" country="Germany"/>
+          </property>
+          <property name="text">
+           <string>Create subdirectories</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <property name="tristate">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
          <spacer name="spacerOutput">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -168,12 +187,12 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>251</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
-     <y>274</y>
+     <y>198</y>
     </hint>
    </hints>
   </connection>
@@ -184,12 +203,12 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>319</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
-     <y>274</y>
+     <y>198</y>
     </hint>
    </hints>
   </connection>

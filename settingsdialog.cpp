@@ -13,6 +13,7 @@ SettingsDialog::SettingsDialog(QWidget *parent, Settings* settings) :
 	ui->minimize->setChecked(tempSet.getMinimize());
 	ui->compactKernels->setChecked(tempSet.getCompactKernels());
 	ui->compactKernels->setDisabled(!tempSet.getIndent());
+	ui->subdirs->setChecked(tempSet.getSubdirs());
 }
 
 SettingsDialog::~SettingsDialog() {
@@ -50,4 +51,9 @@ SettingsDialog::on_minimize_stateChanged(int state) {
 void
 SettingsDialog::on_compactKernels_stateChanged(int state) {
 	tempSet.setCompactKernels(state==Qt::Checked);
+}
+
+void
+SettingsDialog::on_subdirs_stateChanged(int state) {
+	tempSet.setSubdirs(state==Qt::Checked);
 }
