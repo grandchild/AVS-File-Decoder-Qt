@@ -181,6 +181,32 @@
 		"3": "Infinite Root Multiplier + Small Border Convolution"
 	},
 	
+	"bufferBlendMode": {
+		 "0": "a=b (Replace)",
+		 "1": "a=a+b (Additive)",
+		 "2": "a=max(a,b) (Maximum)",
+		 "3": "a=(a+b)/2 (50/50)",
+		 "4": "a=a-b (Subtractive 1)",
+		 "5": "a=b-a (Subtractive 2)",
+		 "6": "a=a*b (Multiply)",
+		 "7": "a=a*x+b*(1-x) (Adjustable)",
+		 "8": "a=a xor b (XOR)",
+		 "9": "a=min(a,b) (Minimum)",
+		"10": "a=|a-b| (Absolute difference)"
+	},
+	
+	"bufferBlendBuffer": {
+		"0": 0,
+		"1": 1,
+		"2": 2,
+		"3": 3,
+		"4": 4,
+		"5": 5,
+		"6": 6,
+		"7": 7,
+		"8": "Current"
+	},
+	
 	"particleSystemAccelerationType": {
 		"0": "Constant",
 		"1": "Fade out by 0.9",
