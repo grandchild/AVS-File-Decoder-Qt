@@ -46,6 +46,7 @@ private:
 	QHash<int, QByteArray>* componentDllCodes;
 	QByteArray blob;
 	uint offset;
+	bool oldVersion;
 	MainWindow* window;
 	uint indexCounter;
 	bool error_;
@@ -83,6 +84,7 @@ private:
 	QString sizeString (uint offset, uint size = 0, uint* sizeOut = NULL);
 	QString ntString (uint offset, uint* sizeOut = NULL);
 	bool boolean(uint offset, uint size, uint* sizeOut = NULL);
+	char byte(uint offset, uint *sizeOut = NULL);
 	qint32 int32(uint offset, uint* sizeOut = NULL);
 	uint uInt32(QByteArray blob, uint offset);
 	quint64 uInt64(QByteArray blob, uint offset);

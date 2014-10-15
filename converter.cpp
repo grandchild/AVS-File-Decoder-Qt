@@ -22,7 +22,8 @@ Converter::Converter(Job job,
 	window(window),
 	indexCounter(0),
 	error_(false),
-	errorCount_(0)
+	errorCount_(0),
+	oldVersion(false)
 {}
 
 void
@@ -81,11 +82,14 @@ Converter::decodePresetHeader() {
 	QByteArray presetHeader0_1("Nullsoft AVS Preset 0.1");
 	QByteArray presetHeader0_2("Nullsoft AVS Preset 0.2");
 	presetHeader0_1[AVS_HEADER_LENGTH-2] = 0x1A; // there is one final '26' byte after the readable header ...
-	presetHeader0_2[AVS_HEADER_LENGTH-2] = 0x1A; // ... for that repurpose the \0 byte position from the str c'tor above.
-	if(!blob.startsWith(presetHeader0_2) &&
-		!blob.startsWith(presetHeader0_1)) { // 0.1 only if 0.2 failed because it's far rarer.
-		log("Invalid preset header.", /*error*/true);
-		return QJsonValue(0);
+	presetHeader0_2[AVS_HEADER_LENGTH-2] = 0x1A; // ... for that repurpose the \0 byte position from the str constructor above.
+	if(!blob.startsWith(presetHeader0_2)) {
+		if(blob.startsWith(presetHeader0_1)) { // 0.1 only if 0.2 failed because it's far rarer.
+			oldVersion = true;
+		} else {
+			log("Invalid preset header.", /*error*/true);
+			return QJsonValue(0);
+		}
 	}
 	return QJsonValue(blob[AVS_HEADER_LENGTH-1]==(char)1); // "Clear Every Frame"
 }
@@ -136,7 +140,11 @@ Converter::getComponentIndex(uint code) {
 			}
 		}
 	}
-	log("Found unknown component (code: "+QString("%1").arg(code)+")", /*error*/true);
+	QString unknownId = QString("%1").arg(code);
+	if(code>BUILTIN_MAX) {
+		unknownId = sizeString(offset+SIZE_INT, 32);
+	}
+	log("Found unknown component (ID: "+unknownId+")", /*error*/true);
 	return -code;
 }
 
@@ -169,7 +177,9 @@ Converter::decodeGeneric(uint offset, uint end, QString name, QString group, QJs
 	bool lastWasABitField = false;
 	for (int i = 0; i < fields.size(); ++i) {
 		if(offset >= end) {
-			log("Warning: Component went over its size while scanning.", /*error*/true);
+			if(offset>end) { // newer versions of some effects might have an additional field. ignore just the one surplus, and only nag when it's more.
+				log(QString("Warning: Component (\"%1\") went over its size while scanning. (offset: %2, end: %3)").arg(name).arg(offset).arg(end), /*error*/false);
+			}
 			break;
 		}
 		QString k = fields[i].toObject().keys()[0];
@@ -250,13 +260,13 @@ Converter::decodeEffectList(uint offset) {
 	
 	QByteArray effectList28plusHeader = "AVS 2.8+ Effect List Config";
 	uint extOffset = offset+41;
-	uint contSize = size-41;
-	uint contOffset = extOffset;
+	uint contSize = size-41+SIZE_INT;
+	uint contOffset = extOffset-SIZE_INT;
 	if(blob.mid(extOffset, 32).startsWith(effectList28plusHeader)) {
 		extOffset += 32;
 		uint extSize = uInt32(blob, extOffset);
 		contSize = size-41-32-SIZE_INT-extSize;
-		contOffset += 32+SIZE_INT+extSize;
+		contOffset += SIZE_INT+32+SIZE_INT+extSize;
 		QJsonObject code;
 		code[ordKey("enabled")] = boolean(extOffset+SIZE_INT, SIZE_INT);
 		uint initSize = uInt32(blob, extOffset+SIZE_INT*2);
@@ -284,8 +294,15 @@ Converter::decodeMovement (uint offset) {
 	if(effectIdOld!=0) {
 		if(effectIdOld==32767) {
 			uint sizeOut = 0;
-			code = sizeString(offset+SIZE_INT+1, 0, &sizeOut); // for some reason there is a single byte reading '0x01' before custom code.
+			// usually, there is a single byte reading '0x01' before custom code.
+			// if it's absent it means it's an older version and the string has no size header.
+			if(byte(offset+SIZE_INT)==0x01) {
+				code = sizeString(offset+SIZE_INT+1, 0, &sizeOut);
+			} else {
+				code = ntString(offset+SIZE_INT, &sizeOut);
+			}
 			offset += sizeOut;
+			log(QString("sizeout: %1").arg(sizeOut));
 		} else {
 			effect = tables->value("movementEffects").toObject()[QString("%1").arg(effectIdOld)].toArray();
 		}
@@ -308,6 +325,7 @@ Converter::decodeMovement (uint offset) {
 	}
 	comp[ordKey("code")] = code;
 	offset += SIZE_INT*(6+(effectIdOld==0));
+	log(QString("Offset: %1").arg(offset));
 	return comp;
 }
 
@@ -485,8 +503,8 @@ Converter::codeSection(uint offset, QJsonArray map, bool nt, uint* sizeOut) {
 	uint totalSize = 0;
 	for (int i = 0; i < map.size(); i++) {
 		uint sizeOutInner;
-		QString str = nt ? ntString(offset+totalSize, &sizeOutInner) : sizeString(offset+totalSize, 0, &sizeOutInner);
-		totalSize += sizeOutInner;
+		QString str = nt||oldVersion ? ntString(offset+totalSize, &sizeOutInner) : sizeString(offset+totalSize, 0, &sizeOutInner);
+		totalSize += oldVersion ? 256 : sizeOutInner;
 		strings.append(str);
 	};
 	QJsonObject code;
@@ -634,6 +652,7 @@ Converter::sizeString(uint offset, uint size, uint* sizeOut) {
 	uint i = offset+add;
 	char c = blob[i];
 	while(c>0 && i<end) {
+		//log(QString(c));
 		result.append(c);
 		c = blob[++i];
 	}
@@ -661,11 +680,21 @@ Converter::boolean (uint offset, uint size, uint* sizeOut) {
 	return val!=0;
 }
 
+char
+Converter::byte (uint offset, uint* sizeOut) {
+	if(sizeOut) *sizeOut = 1;
+	if(offset > blob.length()) {
+		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (byte)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
+		return 0;
+	}
+	return *((char*)(blob.constData()+offset));
+}
+
 qint32
 Converter::int32 (uint offset, uint* sizeOut) {
 	if(sizeOut) *sizeOut = SIZE_INT;
-	if(offset+SIZE_INT > blob.length()) {
-		log(QString("Offset out of range in %1").arg(this->fileName()), /*error*/true);
+	if(offset-1+SIZE_INT > blob.length()) {
+		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (int32)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
 		return 0;
 	}
 	return *((qint32*)(blob.constData()+offset));
@@ -673,8 +702,8 @@ Converter::int32 (uint offset, uint* sizeOut) {
 
 uint
 Converter::uInt32(QByteArray blob, uint offset) {
-	if(offset+SIZE_INT > blob.length()) {
-		log(QString("Offset out of range in %1").arg(this->fileName()), /*error*/true);
+	if(offset-1+SIZE_INT > blob.length()) {
+		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (uint32)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
 		return 0;
 	}
 	return *((uint*)(blob.constData()+offset));
@@ -682,8 +711,8 @@ Converter::uInt32(QByteArray blob, uint offset) {
 
 quint64
 Converter::uInt64(QByteArray blob, uint offset) {
-	if(offset+sizeof(qint64) > blob.length()) {
-		log(QString("Offset out of range in %1").arg(this->fileName()), /*error*/true);
+	if(offset-1+sizeof(qint64) > blob.length()) {
+		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (uint64)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
 		return 0;
 	}
 	return *((quint64*)(blob.constData()+offset));
@@ -692,14 +721,18 @@ Converter::uInt64(QByteArray blob, uint offset) {
 QJsonValue
 Converter::float32 (uint offset, uint* sizeOut) {
 	if(sizeOut) *sizeOut = 4;
+	if(offset-1+sizeof(float) > blob.length()) {
+		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (float32)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
+		return 0;
+	}
 	return *((float*)(blob.constData()+offset));
 }
 
 QJsonValue
 Converter::bit(uint offset, QJsonValue pos, uint* sizeOut) {
 	if(sizeOut) *sizeOut = 1;
-	if(offset+SIZE_INT > blob.length()) {
-		log(QString("Offset out of range in %1").arg(this->fileName()), /*error*/true);
+	if(offset-1+SIZE_INT > blob.length()) {
+		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (bit)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
 		return 0;
 	}
 	if(pos.isArray()) {
