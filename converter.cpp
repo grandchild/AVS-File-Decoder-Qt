@@ -523,7 +523,7 @@ Converter::colorList(uint offset, uint* sizeOut) {
 	uint num = uInt32(blob, offset);
 	uint size = SIZE_INT+num*SIZE_INT;
 	if(num>1023) {
-		log(QString("Color List - unreasonably large color count (%1).").arg(num), /*error*/true);
+		log(QString("Color List in %1 - unreasonably large color count (%2).").arg(fileName()).arg(num), /*error*/true);
 	} else {
 		while(num>0) {
 			offset += SIZE_INT;
