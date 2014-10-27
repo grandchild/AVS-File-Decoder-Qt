@@ -205,7 +205,7 @@ ConvertController::convertSingle(Job job, QThread* thread) {
 		log("Thread no "+QString("%1").arg(threadPool.indexOf(thread))+" is not ready.", true);
 		return;
 	}
-	Converter* converter = new Converter(job, &components, &tables, &componentDllCodes, window);
+	Converter* converter = new Converter(job, &components, &tables, &componentDllCodes, window, settings->getCompactKernels());
 	converter->moveToThread(thread);
 	connect(thread, &QThread::finished, converter, &QObject::deleteLater);
 	connect(this, &ConvertController::go, converter, &Converter::worker_toJson);
@@ -279,10 +279,13 @@ ConvertController::postProcess(QString* preset) {
 		preset->replace(QRegExp(rx), "");
 	}
 	
-	// remove ordering indices (TODO: how much deep copying is done here? more than once? optimization possible? measure!)	
-	preset->replace(QRegExp("([^\\\\])\"__\\d{5}__"), "\\1\"");
+	// remove ordering indices (TODO: how much deep copying is done here? more than once? optimization possible? measure!)
+	preset->replace(QRegExp("\"__\\d{5}__([^\"]+\":)"), "\"\\1");
 	
 	// format convolution kernels
+	if(settings->getCompactKernels()) {
+		preset->replace(QRegExp("\"__kernelLine__([^\"]+)\""), "\\1");
+	}
 	/*
 	QRegExp kernelHeaderRx("\\s+\"kernel\": \\{\\n"
 						"\\s+\"width\": ([0-9]+),\\n"

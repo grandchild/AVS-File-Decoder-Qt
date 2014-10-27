@@ -8,7 +8,7 @@
 #include <QJsonArray>
 
 #include "mainwindow.h"
-#include "convertcontroller.h"\
+#include "convertcontroller.h"
 #include "job.h"
 //#include "convertexception.h"
 
@@ -22,6 +22,7 @@ public:
 				QJsonObject* tables,
 				QHash<int, QByteArray>* componentDllCodes,
 				MainWindow* window,
+				bool compactKernels = false,
 				QByteArray blob = QByteArray(),
 				uint offset = 0);
 	QString toJson();
@@ -44,13 +45,14 @@ private:
 	QJsonArray* components;
 	QJsonObject* tables;
 	QHash<int, QByteArray>* componentDllCodes;
+	bool compactKernels;
 	QByteArray blob;
 	uint offset;
-	bool oldVersion;
 	MainWindow* window;
 	uint indexCounter;
 	bool error_;
 	int errorCount_;
+	bool oldVersion;
 	
 	QJsonArray toJsonArray();
 	QJsonValue decodePresetHeader();

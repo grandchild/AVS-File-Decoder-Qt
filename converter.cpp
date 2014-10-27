@@ -10,6 +10,7 @@ Converter::Converter(Job job,
 						QJsonObject* tables,
 						QHash<int, QByteArray>* componentDllCodes,
 						MainWindow* window,
+						bool compactKernels,
 						QByteArray blob,
 						uint offset):
 	job(job),
@@ -17,6 +18,7 @@ Converter::Converter(Job job,
 	components(components),
 	tables(tables),
 	componentDllCodes(componentDllCodes),
+	compactKernels(compactKernels),
 	blob(blob),
 	offset(offset),
 	window(window),
@@ -274,7 +276,7 @@ Converter::decodeEffectList(uint offset) {
 		code[ordKey("frame")] = sizeString(extOffset+SIZE_INT*3+initSize);
 		comp[ordKey("code")] = code;
 	} //else: old Effect List format, inside components just start
-	Converter content(file, components, tables, componentDllCodes, window, blob.mid(contOffset, contSize));
+	Converter content(file, components, tables, componentDllCodes, window, compactKernels, blob.mid(contOffset, contSize));
 	connect(&content, &Converter::worker_log, window, &MainWindow::on_log);
 	comp[ordKey("components")] = content.decode();
 	error_ |= content.error();
@@ -597,14 +599,25 @@ Converter::convoFilter(uint offset, QJsonValue dimensions, uint* sizeOut) {
 		log("ConvoFilter: Size must be array with x and y dimensions in dwords.", /*error*/true);
 	}
 	QJsonArray dimArr = dimensions.toArray();
-	uint size = dimArr[0].toDouble() * dimArr[1].toDouble();
-	QJsonArray data;
-	for (uint i = 0; i < size; i++, offset+=SIZE_INT) {
-		data.append((double)int32(offset));
-	}
 	QJsonObject kernel;
 	kernel[ordKey("width")] = dimArr[0];
 	kernel[ordKey("height")] = dimArr[1];
+	uint size = dimArr[0].toDouble() * dimArr[1].toDouble();
+	QJsonArray data;
+	if(compactKernels) {
+		for (int i = 0; i < dimArr[1].toInt(); i++) {
+			QString kernelLine = QString("__kernelLine__%1").arg(int32(offset), 3, 10, QChar(' '));
+			offset+=SIZE_INT;
+			for (int k = 1; k < dimArr[0].toInt(); k++, offset+=SIZE_INT) {
+				kernelLine += QString(", %1").arg(int32(offset), 3, 10, QChar(' '));
+			}
+			data.append(QJsonValue(kernelLine));
+		}
+	} else {
+		for (uint i = 0; i < size; i++, offset+=SIZE_INT) {
+			data.append((double)int32(offset));
+		}
+	}
 	kernel[ordKey("data")] = data;
 	
 	if(sizeOut) *sizeOut = size*SIZE_INT;
