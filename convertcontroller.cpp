@@ -272,7 +272,7 @@ ConvertController::postProcess(QString* preset) {
 	
 	// minimize empty fields
 	if(settings->getMinimize()) {
-		QString rx = "\"\(\w|\d|_)+\" ?: ?\"\",?";
+		QString rx = "\"\\(\\w|\\d|_)+\" ?: ?\"\",?";
 		if(settings->getIndent()) {
 			rx = "(\\n|\\r|\\n\\r) *"+rx;
 		}
