@@ -644,6 +644,10 @@ QString
 Converter::sizeString(uint offset, uint size, uint* sizeOut) {
 	uint add = 0;
 	QString result;
+	if(offset >= (uint)blob.length()) {
+		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (sizeString)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
+		return result;
+	}
 	if(size==0) {
 		size = uInt32(blob, offset);
 		add = SIZE_INT;
@@ -652,7 +656,10 @@ Converter::sizeString(uint offset, uint size, uint* sizeOut) {
 	uint i = offset+add;
 	char c = blob[i];
 	while(c>0 && i<end) {
-		//log(QString(c));
+		if(i >= (uint)blob.length()) {
+			log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (sizeString)").arg(this->fileName()).arg(blob.length()).arg(i), /*error*/true);
+			return result;
+		}
 		result.append(c);
 		c = blob[++i];
 	}
@@ -663,9 +670,17 @@ Converter::sizeString(uint offset, uint size, uint* sizeOut) {
 QString
 Converter::ntString(uint offset, uint* sizeOut) {
 	QString result;
+	if(offset >= (uint)blob.length()) {
+		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (ntString)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
+		return result;
+	}
 	uint i = offset;
 	char c = blob[i];
 	while(c>0) {
+		if(i >= (uint)blob.length()) {
+			log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (ntString)").arg(this->fileName()).arg(blob.length()).arg(i), /*error*/true);
+			return result;
+		}
 		result.append(c);
 		c = blob[++i];
 	}
@@ -676,6 +691,10 @@ Converter::ntString(uint offset, uint* sizeOut) {
 bool
 Converter::boolean (uint offset, uint size, uint* sizeOut) {
 	if(sizeOut) *sizeOut = size==1 ? 1 : SIZE_INT;
+	if(offset-(size==1?0:1+SIZE_INT) > (uint)blob.length()) {
+		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (boolean)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
+		return false;
+	}
 	uint val = size==1 ? blob[offset] : uInt32(blob, offset);
 	return val!=0;
 }
@@ -683,7 +702,7 @@ Converter::boolean (uint offset, uint size, uint* sizeOut) {
 char
 Converter::byte (uint offset, uint* sizeOut) {
 	if(sizeOut) *sizeOut = 1;
-	if(offset > blob.length()) {
+	if(offset > (uint)blob.length()) {
 		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (byte)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
 		return 0;
 	}
@@ -693,7 +712,7 @@ Converter::byte (uint offset, uint* sizeOut) {
 qint32
 Converter::int32 (uint offset, uint* sizeOut) {
 	if(sizeOut) *sizeOut = SIZE_INT;
-	if(offset-1+SIZE_INT > blob.length()) {
+	if(offset-1+SIZE_INT > (uint)blob.length()) {
 		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (int32)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
 		return 0;
 	}
@@ -702,7 +721,7 @@ Converter::int32 (uint offset, uint* sizeOut) {
 
 uint
 Converter::uInt32(QByteArray blob, uint offset) {
-	if(offset-1+SIZE_INT > blob.length()) {
+	if(offset-1+SIZE_INT > (uint)blob.length()) {
 		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (uint32)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
 		return 0;
 	}
@@ -711,7 +730,7 @@ Converter::uInt32(QByteArray blob, uint offset) {
 
 quint64
 Converter::uInt64(QByteArray blob, uint offset) {
-	if(offset-1+sizeof(qint64) > blob.length()) {
+	if(offset-1+sizeof(qint64) > (uint)blob.length()) {
 		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (uint64)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
 		return 0;
 	}
@@ -721,7 +740,7 @@ Converter::uInt64(QByteArray blob, uint offset) {
 QJsonValue
 Converter::float32 (uint offset, uint* sizeOut) {
 	if(sizeOut) *sizeOut = 4;
-	if(offset-1+sizeof(float) > blob.length()) {
+	if(offset-1+sizeof(float) > (uint)blob.length()) {
 		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (float32)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
 		return 0;
 	}
@@ -731,7 +750,7 @@ Converter::float32 (uint offset, uint* sizeOut) {
 QJsonValue
 Converter::bit(uint offset, QJsonValue pos, uint* sizeOut) {
 	if(sizeOut) *sizeOut = 1;
-	if(offset-1+SIZE_INT > blob.length()) {
+	if(offset-1+SIZE_INT > (uint)blob.length()) {
 		log(QString("Offset out of range in %1 (blobsize: %2, offset: %3) (bit)").arg(this->fileName()).arg(blob.length()).arg(offset), /*error*/true);
 		return 0;
 	}
