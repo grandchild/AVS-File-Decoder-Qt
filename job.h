@@ -23,7 +23,7 @@ public:
 	bool preview() { return (this->properties_ & Preview) > 0; }
 	bool fileOut() { return (this->properties_ & FileOut) > 0; }
 	
-	bool setProperty(uint property, bool set);
+	void setProperty(uint property, bool set);
 };
 
 #endif // JOB_H

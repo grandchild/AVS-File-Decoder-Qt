@@ -10,7 +10,7 @@ Job::Job(Job *other) {
 	properties_ = other->properties();
 }
 
-bool
+void
 Job::setProperty(uint property, bool set) {
 	if(set) {
 		properties_ |= property;
