@@ -212,7 +212,7 @@ MainWindow::on_samplePresetSelectBox_currentIndexChanged(int index)
 
 void MainWindow::on_updateThreadInfo(uint threadId, QString info)
 {
-	if(!threadInfo.contains(threadId) && threadInfo.size() >= converter->threadNum()) {
+	if(!threadInfo.contains(threadId) && ((uint)threadInfo.size()) >= converter->threadNum()) {
 		qDebug() << "A wild thread appeared, it's not very effective.";
 		threadInfo.remove(threadInfo.keys()[0]);
 	}
