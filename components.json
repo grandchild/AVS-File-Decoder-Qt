@@ -1,4 +1,4 @@
-﻿[
+[
 	{"name": "Effect List", // builtin and r_list.cpp for extended Effect Lists
 		"code": "0xfffffffe", "group": "", "func": "effectList"},
 	{"name": "Simple", // r_simple.cpp
@@ -272,7 +272,7 @@
 		"code": "0x1E", "group": "Trans", "func": "generic", "fields": [
 			{"enabled": ["boolean", 4]},
 			{"size": 4},
-			{"sizeOnBeat": 4},
+			{"onBeatSize": 4},
 			{"output": ["map8", {"0": "Replace", "1": "Additive", "0x100000000": "50/50"}]},
 			{"onbeat": ["boolean", 4]},
 			{"durFrames": 4}
