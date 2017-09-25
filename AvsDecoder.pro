@@ -36,10 +36,17 @@ FORMS    += mainwindow.ui \
 
 INCLUDEPATH += $$PWD/include
 
-OTHER_FILES += \
+COMPONENTS_FILES = \
     tables.json \
-    components.json \
+    components.json
+
+OTHER_FILES += \
+    $$COMPONENTS_FILES \
     .gitignore
+
+install.path = $$OUT_PWD
+install.files = $$COMPONENTS_FILES
+INSTALLS += install
 
 ### platform-specific compiler options
 unix|macx  {

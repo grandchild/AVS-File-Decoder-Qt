@@ -21,8 +21,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->setupUi(this);
 	ui->cancelButton->setDisabled(true);
 	ui->samplePresetSelectBox->addItem(noneText);
-	ui->inputPathEdit->setText("D:\\Daten\\Dropbox");
-	ui->outputPathEdit->setText("D:\\Daten\\Desktop");
+	ui->inputPathEdit->setText("");
+	ui->outputPathEdit->setText("");
 }
 
 MainWindow::~MainWindow() {
